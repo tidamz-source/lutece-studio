@@ -1,0 +1,87 @@
+{
+ "palette": [
+  "#FFBB00",
+  "#00543C",
+  "#7634CC",
+  "#FFFFFF",
+  "#0A0A0A",
+  "#101A3C",
+  "#EF3E36",
+  "#F4EDE1"
+ ],
+ "backgrounds": [
+  {
+   "id": "jaune",
+   "name": "Jaune",
+   "src": "assets/backgrounds/jaune.jpg"
+  },
+  {
+   "id": "vert",
+   "name": "Vert",
+   "src": "assets/backgrounds/vert.jpg"
+  },
+  {
+   "id": "violet",
+   "name": "Violet",
+   "src": "assets/backgrounds/violet.jpg"
+  }
+ ],
+ "elements": [
+  {
+   "id": "signature",
+   "name": "Signature",
+   "src": "assets/elements/signature.png",
+   "tintable": true,
+   "category": "Logo"
+  },
+  {
+   "id": "stelly-revers",
+   "name": "Revers",
+   "src": "assets/elements/stelly-revers.png",
+   "tintable": false,
+   "category": "Stelly"
+  },
+  {
+   "id": "stelly-bras-croises",
+   "name": "Bras croisés",
+   "src": "assets/elements/stelly-bras-croises.png",
+   "tintable": false,
+   "category": "Stelly"
+  },
+  {
+   "id": "stelly-mains-jointes",
+   "name": "Mains jointes",
+   "src": "assets/elements/stelly-mains-jointes.png",
+   "tintable": false,
+   "category": "Stelly"
+  },
+  {
+   "id": "stelly-sky",
+   "name": "Sky",
+   "src": "assets/elements/stelly-sky.png",
+   "tintable": false,
+   "category": "Stelly"
+  },
+  {
+   "id": "stelly-coup-droit",
+   "name": "Coup droit",
+   "src": "assets/elements/stelly-coup-droit.png",
+   "tintable": false,
+   "category": "Stelly"
+  },
+  {
+   "id": "stelly-attention",
+   "name": "Attention",
+   "src": "assets/elements/stelly-attention.png",
+   "tintable": false,
+   "category": "Stelly"
+  },
+  {
+   "id": "stelly-court",
+   "name": "Court",
+   "src": "assets/elements/stelly-court.png",
+   "tintable": false,
+   "category": "Stelly"
+  }
+ ]
+}

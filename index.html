@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Lutèce Studio</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#161a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lutèce Studio">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+@font-face{font-family:"Anton";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/anton-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Bebas Neue";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/bebas-neue-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo Black";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/archivo-black-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/permanent-marker-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/barlow-condensed-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:800;font-style:normal;font-display:swap;src:url(fonts/barlow-condensed-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:800;font-style:italic;font-display:swap;src:url(fonts/barlow-condensed-latin-800-italic.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:500;font-style:normal;font-display:swap;src:url(fonts/inter-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/inter-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:700;font-style:normal;font-display:swap;src:url(fonts/inter-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Inter";font-weight:800;font-style:normal;font-display:swap;src:url(fonts/inter-latin-800-normal.woff2) format("woff2")}
+:root{
+  --bg:#0d1020; --panel:#161a2e; --panel2:#1f2440; --line:#2b3157; --text:#eef0fa; --muted:#9aa1c4;
+  --accent:#FFC83D; --accent-ink:#101A3C; --danger:#ff5a4e;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:500 14px/1.35 Inter,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+#app{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto auto;height:100dvh;padding-top:var(--safe-t)}
+/* header */
+header{display:flex;align-items:center;gap:6px;padding:8px 10px;min-width:0;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font:400 20px Anton,sans-serif;letter-spacing:.5px;white-space:nowrap}
+.brand span{color:var(--accent)}
+.seg{display:flex;background:var(--bg);border-radius:10px;padding:3px;margin:0 auto}
+.seg button{border:0;background:none;padding:6px 9px;border-radius:8px;font-weight:700;color:var(--muted);font-size:13px}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.ibtn{border:0;background:var(--panel2);width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none}
+.ibtn:disabled{opacity:.35}
+.ibtn svg{width:18px;height:18px}
+.export{border:0;background:var(--accent);color:var(--accent-ink);font-weight:800;padding:0 14px;height:36px;border-radius:10px;display:flex;align-items:center;gap:6px;flex:none}
+.export svg{width:16px;height:16px}
+/* stage */
+#stage{position:relative;min-height:0;display:grid;place-items:center;overflow:hidden;padding-bottom:78px;background:
+  radial-gradient(circle at 50% 40%,#1a1f3a,#0b0e1c)}
+#cv{touch-action:none;box-shadow:0 10px 40px rgba(0,0,0,.5);border-radius:4px;display:block}
+.stage-tools{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.chip{border:1px solid var(--line);background:rgba(22,26,46,.85);backdrop-filter:blur(6px);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--muted)}
+.chip.on{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+/* pages */
+#pages{position:absolute;left:0;right:0;bottom:0;height:78px;display:flex;align-items:center;gap:8px;padding:8px 10px;background:linear-gradient(transparent,rgba(8,10,20,.85) 30%)}
+#pthumbs{flex:1;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;align-items:center;min-width:0;height:100%}
+.pth{flex:none;height:56px;border-radius:6px;border:2px solid transparent;padding:0;background:#000;position:relative;overflow:hidden;opacity:.75}
+.pth canvas{height:100%;display:block}
+.pth.on{border-color:var(--accent);opacity:1}
+.pth b{position:absolute;left:3px;top:2px;font-size:10px;font-weight:800;background:rgba(0,0,0,.6);border-radius:4px;padding:0 4px;color:#fff}
+.pbtn{flex:none;width:40px;height:40px;border-radius:10px;border:1px dashed var(--muted);background:rgba(22,26,46,.85);color:var(--text);display:grid;place-items:center;padding:0}
+.pbtn.solid{border-style:solid;border-color:var(--line)}
+.pbtn svg{width:18px;height:18px}
+/* context bar */
+#ctx{display:none;gap:6px;padding:6px 10px;background:var(--panel);border-top:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+#ctx.show{display:flex}
+#ctx button{flex:none;border:0;background:var(--panel2);border-radius:10px;padding:8px 11px;font-weight:700;font-size:12.5px;display:flex;gap:6px;align-items:center}
+#ctx button svg{width:15px;height:15px}
+#ctx button.danger{color:var(--danger)}
+/* panel */
+#panel{min-width:0;background:var(--panel);border-top:1px solid var(--line);max-height:42dvh;overflow-y:auto;padding:12px;overscroll-behavior:contain}
+#panel.closed{display:none}
+#tabs{display:flex;background:var(--panel);border-top:1px solid var(--line);padding:4px 4px calc(4px + var(--safe-b));overflow-x:auto;scrollbar-width:none}
+#tabs button{flex:1 1 0;min-width:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border-radius:10px;color:var(--muted);font-size:10.5px;font-weight:700;white-space:nowrap}
+#tabs button svg{width:21px;height:21px}
+#tabs button.on{color:var(--accent);background:var(--panel2)}
+/* panel content */
+.delbtn{border:0;background:rgba(255,90,78,.14);color:var(--danger);border-radius:9px;width:34px;height:30px;display:grid;place-items:center;padding:0;flex:none}
+.delbtn svg{width:17px;height:17px}
+.mwrap{position:relative}
+.mwrap .delbtn{position:absolute;top:4px;right:4px;width:28px;height:28px;background:rgba(10,12,24,.8)}
+h3{margin:4px 0 10px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+.thumb{border:2px solid transparent;border-radius:10px;background:var(--panel2);padding:0;overflow:hidden;aspect-ratio:9/16;position:relative}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.sq{aspect-ratio:1;padding:10px;background:repeating-conic-gradient(#262c4e 0 25%,#1d2240 0 50%) 0 0/16px 16px}
+.thumb.sq img{object-fit:contain}
+.thumb.on{border-color:var(--accent)}
+.thumb .lbl{position:absolute;left:0;right:0;bottom:0;font-size:10px;font-weight:700;padding:3px;background:linear-gradient(transparent,rgba(0,0,0,.7));text-align:center}
+.big{width:100%;border:0;border-radius:12px;padding:13px;font-weight:800;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px}
+.big.ghost{background:var(--panel2);color:var(--text)}
+.upl{position:relative;overflow:hidden;cursor:pointer}
+.upl input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:100px}
+.big.danger{background:var(--danger);color:#fff}
+.big svg{width:18px;height:18px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.row>label{width:78px;flex:none;color:var(--muted);font-size:12px;font-weight:600}
+.row input[type=range]{flex:1}
+.stack{display:flex;flex-direction:column;gap:10px}
+.sep{height:1px;background:var(--line);margin:14px 0}
+input[type=range]{-webkit-appearance:none;appearance:none;height:28px;background:none}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--line);border-radius:4px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);margin-top:-9px;border:3px solid var(--panel)}
+input[type=range]::-moz-range-track{height:4px;background:var(--line);border-radius:4px}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);border:3px solid var(--panel)}
+.txt,textarea,select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;outline:none}
+textarea{resize:vertical;min-height:70px}
+.txt:focus,textarea:focus{border-color:var(--accent)}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:7px 12px;font-weight:700;font-size:13px}
+.pill.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fonts{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.fonts .pill{font-size:17px;white-space:nowrap;padding:6px 14px}
+.sw{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.sw button{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);padding:0}
+.sw button.on{outline:3px solid var(--accent);outline-offset:2px}
+.sw label.custom{width:30px;height:30px;border-radius:50%;border:2px dashed var(--muted);display:grid;place-items:center;position:relative;overflow:hidden;font-size:16px;color:var(--muted)}
+.sw label.custom input{position:absolute;inset:0;opacity:0;width:100%;height:100%}
+.match{display:grid;grid-template-columns:1fr 50px 50px 1fr 34px;gap:6px;margin-bottom:8px;align-items:center}
+.match input{padding:9px 8px;text-align:center}
+.match .del{border:0;background:none;color:var(--danger);font-size:20px;padding:0}
+.layer{display:flex;align-items:center;gap:8px;padding:8px;border-radius:12px;background:var(--panel2);margin-bottom:6px;border:2px solid transparent}
+.layer.on{border-color:var(--accent)}
+.layer .grip{width:26px;height:34px;display:grid;place-items:center;color:var(--muted);touch-action:none;cursor:grab;flex:none;margin-right:-4px}
+.layer .grip svg{width:16px;height:16px}
+.layer.dragging{position:relative;z-index:5;background:#2a3060;box-shadow:0 8px 24px rgba(0,0,0,.45);border-color:var(--accent);transition:none}
+.layer.shift{transition:transform .15s}
+.layer .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.layer .ic{width:34px;height:34px;border-radius:8px;background:var(--bg);display:grid;place-items:center;flex:none;overflow:hidden}
+.layer .ic img{width:100%;height:100%;object-fit:contain}
+.layer .ic svg{width:16px;height:16px;color:var(--muted)}
+.layer button{border:0;background:none;width:30px;height:30px;display:grid;place-items:center;color:var(--muted);padding:0;flex:none}
+.layer button svg{width:17px;height:17px}
+.layer button.off{opacity:.35}
+.tpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tpl button{border:2px solid var(--line);background:var(--panel2);border-radius:14px;padding:0;overflow:hidden;text-align:left}
+.tpl canvas{width:100%;display:block;aspect-ratio:9/16;background:#000}
+.tpl span{display:block;padding:8px 10px;font-weight:700;font-size:13px}
+.hint{color:var(--muted);font-size:12.5px;margin:8px 0 0}
+.empty{color:var(--muted);text-align:center;padding:14px;font-size:13px}
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(5,7,15,.7);display:none;place-items:center;z-index:50;padding:20px}
+.modal.show{display:grid}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;width:min(420px,100%)}
+.card h2{margin:0 0 6px;font:400 26px Anton,sans-serif}
+.card p{color:var(--muted);margin:0 0 14px}
+.card .stack .big{justify-content:space-between}
+.card .stack .big small{font-weight:600;opacity:.7}
+#toast{position:fixed;left:50%;bottom:calc(120px + var(--safe-b));transform:translateX(-50%) translateY(20px);background:#fff;color:#111;font-weight:700;padding:10px 16px;border-radius:999px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%)}
+@media (max-width:520px){
+  .brand{font-size:17px}.brand span{display:none}
+  .export .lbl{display:none}.export{padding:0 11px}
+  .ibtn{width:32px;height:32px}
+}
+/* desktop */
+@media (min-width:900px){
+  #app{grid-template-columns:1fr 380px;grid-template-rows:auto auto 1fr auto}
+  header{grid-column:1/3}
+  #stage{grid-column:1;grid-row:2/5}
+  #tabs{grid-column:2;grid-row:2;border-top:0;border-left:1px solid var(--line);padding-bottom:4px}
+  #ctx{grid-column:2;grid-row:3;display:none}
+  #ctx.show{display:flex;flex-wrap:wrap;align-self:start}
+  #panel{grid-column:2;grid-row:3/5;max-height:none;border-left:1px solid var(--line)}
+  #ctx.show + #panel{grid-row:4}
+  #panel.closed{display:block}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">LUTÈCE <span>STUDIO</span></div>
+    <button class="ibtn" id="undo" title="Annuler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg></button>
+    <button class="ibtn" id="redo" title="Rétablir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg></button>
+    <div class="seg" id="formats"></div>
+    <button class="export" id="exportBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span class="lbl">Exporter</span></button>
+  </header>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div class="stage-tools"><button class="chip" id="safeBtn" title="Zones masquées par l'interface des stories">Zones UI</button></div>
+    <div id="pages"><div id="pthumbs"></div>
+      <button class="pbtn" id="pAdd" title="Nouvelle page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="pbtn solid" id="pMenu" title="Options de la page"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
+  </div>
+  <div id="ctx"></div>
+  <div id="panel"></div>
+  <nav id="tabs"></nav>
+</div>
+<div class="modal" id="modal"><div class="card" id="modalCard"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   CONSTANTES
+   ============================================================ */
+const FORMATS = {
+  "9x16": {w:1080, h:1920, label:"9:16", name:"Story"},
+  "4x5":  {w:1080, h:1350, label:"4:5",  name:"Post"},
+  "1x1":  {w:1080, h:1080, label:"1:1",  name:"Carré"}
+};
+const FONTS = [
+  {fam:"Anton", w:400, label:"Anton"},
+  {fam:"Bebas Neue", w:400, label:"Bebas"},
+  {fam:"Archivo Black", w:400, label:"Archivo"},
+  {fam:"Barlow Condensed", w:800, label:"Barlow"},
+  {fam:"Permanent Marker", w:400, label:"Marker"},
+  {fam:"Inter", w:800, label:"Inter"}
+];
+const ICONS = {
+  tpl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+  bg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/></svg>',
+  photo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  el:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.4 6.7 19.3l1.1-5.9L3.4 9.3l6-.8z"/></svg>',
+  text:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6V4h14v2"/><path d="M12 4v16"/><path d="M9 20h6"/></svg>',
+  score:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M12 5v14"/><path d="M6 10v4M17 10h2v2h-2v2h2"/></svg>',
+  layers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>',
+  eye:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+  dup:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  center:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="4"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  flip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M8 7 3 12l5 5zM16 7l5 5-5 5z"/></svg>'
+};
+const TABS = [
+  {id:"tpl", label:"Modèles", ic:"tpl"},
+  {id:"bg", label:"Fond", ic:"bg"},
+  {id:"photo", label:"Photos", ic:"photo"},
+  {id:"el", label:"Éléments", ic:"el"},
+  {id:"text", label:"Texte", ic:"text"},
+  {id:"score", label:"Score", ic:"score"},
+  {id:"layers", label:"Calques", ic:"layers"}
+];
+const FALLBACK_MANIFEST = {palette:["#101A3C","#2B59C3","#FFC83D","#EF3E36","#F4EDE1","#FFFFFF","#0A0A0A"],backgrounds:[],elements:[]};
+
+/* ============================================================
+   ÉTAT
+   ============================================================ */
+let LIB = FALLBACK_MANIFEST;
+let PAL = LIB.palette;
+const media = {};          // id -> dataURL (photos importées)
+const imgCache = {};       // src -> HTMLImageElement
+const tintCache = {};      // src|color -> canvas
+let doc = null;            // page courante {format, bg, layers}
+let proj = null;           // {pages:[doc...], cur}
+let sel = null;            // id calque sélectionné
+let tab = "tpl";
+let panelOpen = true;
+let showSafe = false;
+let hist = [], hpos = -1;
+let guides = {x:false, y:false};
+let uid = Date.now() % 100000;
+const nid = () => "l" + (uid++).toString(36);
+
+function newDoc(){
+  return {format:"9x16", bg:{kind:"asset", src:LIB.backgrounds[0]?.src || null, color:"#101A3C", zoom:1, ox:0, oy:0, veil:0, veilMode:"uni", veilColor:"#000000"}, layers:[]};
+}
+const F = () => FORMATS[doc.format];
+/* Transform d'un calque pour un format : réglage propre au format (fx) sinon dérivé du format d'origine (af) */
+function tf(l, fmt){
+  fmt = fmt || doc.format;
+  if(l.fx && l.fx[fmt]) return l.fx[fmt];
+  const af = l.af || "9x16";
+  if(fmt === af) return l;
+  if(l.pin === "bottom"){   // reste collé en bas à taille constante (ex. signature)
+    const ha = FORMATS[af].h, hf = FORMATS[fmt].h;
+    return {x:l.x, y:1 - (1 - l.y) * ha / hf, scale:l.scale, rot:l.rot || 0};
+  }
+  const k = Math.min(1, FORMATS[fmt].h / FORMATS[af].h);
+  return {x:l.x, y:l.y, scale:l.scale * k, rot:l.rot || 0};
+}
+function editT(l){
+  const fmt = doc.format, af = l.af || "9x16";
+  if(fmt === af) return l;
+  l.fx = l.fx || {};
+  if(!l.fx[fmt]){ const d = tf(l, fmt); l.fx[fmt] = {x:d.x, y:d.y, scale:d.scale, rot:d.rot}; }
+  return l.fx[fmt];
+}
+const getLayer = id => doc.layers.find(l => l.id === id);
+const selLayer = () => sel ? getLayer(sel) : null;
+
+/* ============================================================
+   IMAGES
+   ============================================================ */
+function resolveSrc(src){ return src && src.startsWith("media:") ? media[src.slice(6)] : src; }
+function getImg(src){
+  const real = resolveSrc(src);
+  if(!real) return null;
+  let im = imgCache[src];
+  if(!im){
+    im = new Image();
+    im.decoding = "async";
+    im.onload = () => { requestRender(); clearTimeout(window._thAll); window._thAll = setTimeout(() => { if(proj) proj.pages.forEach((_, i) => drawThumb(i)); }, 150); };
+    im.onerror = () => { im._err = true; };
+    im.src = real;
+    imgCache[src] = im;
+  }
+  return (im.complete && im.naturalWidth) ? im : null;
+}
+function tinted(src, im, color){
+  const k = src + "|" + color;
+  if(tintCache[k]) return tintCache[k];
+  const c = document.createElement("canvas");
+  c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const x = c.getContext("2d");
+  x.drawImage(im, 0, 0);
+  x.globalCompositeOperation = "source-in";
+  x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+  return tintCache[k] = c;
+}
+function loadImg(src){
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("decode")); im.src = src; });
+}
+function fileToDataURL(file){
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
+}
+async function readFileAsImage(file){
+  let src = null, url = null;
+  // 1) URL blob  2) data URL  3) createImageBitmap — selon ce que le navigateur / l'appli autorise
+  try{ url = URL.createObjectURL(file); src = await loadImg(url); }catch(e){ src = null; }
+  if(!src){ try{ src = await loadImg(await fileToDataURL(file)); }catch(e){ src = null; } }
+  if(!src && window.createImageBitmap){ try{ src = await createImageBitmap(file); }catch(e){ src = null; } }
+  if(url) URL.revokeObjectURL(url);
+  if(!src) throw new Error(/heic|heif/i.test(file.type + file.name) ? "heic" : "decode");
+  const iw = src.naturalWidth || src.width, ih = src.naturalHeight || src.height;
+  const max = 2400, r = Math.min(1, max / Math.max(iw, ih));
+  const c = document.createElement("canvas");
+  c.width = Math.round(iw * r); c.height = Math.round(ih * r);
+  c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+  const png = /png|webp|gif|svg/.test(file.type);
+  return c.toDataURL(png ? "image/png" : "image/jpeg", 0.9);
+}
+
+/* ============================================================
+   DESSIN
+   ============================================================ */
+function rr(ctx, x, y, w, h, r){
+  r = Math.max(0, Math.min(r, w/2, h/2));
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
+}
+function fontStr(fam, size, italic){
+  const f = FONTS.find(f => f.fam === fam) || FONTS[0];
+  return `${italic ? "italic " : ""}${f.w} ${size}px "${f.fam}"`;
+}
+function hexA(hex, a){
+  const h = hex.replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;
+}
+function spacedWidth(ctx, s, sp){
+  if(!sp) return ctx.measureText(s).width;
+  let w = 0; for(const ch of s) w += ctx.measureText(ch).width + sp;
+  return w - sp;
+}
+function spacedFill(ctx, s, x, y, sp, stroke){
+  if(!sp){ stroke ? ctx.strokeText(s, x, y) : ctx.fillText(s, x, y); return; }
+  for(const ch of s){ stroke ? ctx.strokeText(ch, x, y) : ctx.fillText(ch, x, y); x += ctx.measureText(ch).width + sp; }
+}
+function fitFont(ctx, text, fam, size, maxW, italic, min=18){
+  let s = size;
+  ctx.font = fontStr(fam, s, italic);
+  while(s > min && ctx.measureText(text).width > maxW){ s -= 2; ctx.font = fontStr(fam, s, italic); }
+  return s;
+}
+
+/* --- Texte --- */
+function measureText(ctx, l){
+  const lines = (l.upper ? l.text.toUpperCase() : l.text).split("\n");
+  ctx.font = fontStr(l.font, l.size, l.italic);
+  const sp = l.spacing * l.size / 100;
+  const ws = lines.map(s => spacedWidth(ctx, s, sp));
+  const padX = l.style === "box" ? l.size * .32 : (l.style === "outline" ? l.size * .08 : 0);
+  const padY = l.style === "box" ? l.size * .14 : 0;
+  const lh = l.size * l.lh;
+  const w = Math.max(10, ...ws) + padX * 2;
+  const h = lines.length * lh + padY * 2 + (l.style === "box" ? (lines.length - 1) * 0 : 0);
+  return {lines, ws, sp, padX, padY, lh, w, h};
+}
+function drawText(ctx, l){
+  const m = measureText(ctx, l);
+  ctx.font = fontStr(l.font, l.size, l.italic);
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  const top = -m.h / 2 + m.padY;
+  m.lines.forEach((s, i) => {
+    const lw = m.ws[i];
+    let x = l.align === "left" ? -m.w/2 + m.padX : l.align === "right" ? m.w/2 - m.padX - lw : -lw/2;
+    const cy = top + i * m.lh + m.lh / 2;
+    const yAdj = cy + l.size * (l.font === "Permanent Marker" ? .02 : .05);
+    if(l.style === "box" && s.trim()){
+      ctx.fillStyle = l.bgColor;
+      rr(ctx, x - m.padX, cy - m.lh/2 - m.padY*0.4, lw + m.padX*2, m.lh + m.padY*0.8, l.size * .18);
+      ctx.fill();
+    }
+    if(l.style === "shadow"){
+      ctx.shadowColor = "rgba(0,0,0,.55)"; ctx.shadowBlur = l.size * .3; ctx.shadowOffsetY = l.size * .06;
+    }
+    if(l.style === "outline"){
+      ctx.lineJoin = "round"; ctx.miterLimit = 2;
+      ctx.lineWidth = l.size * .14; ctx.strokeStyle = l.bgColor;
+      spacedFill(ctx, s, x, yAdj, m.sp, true);
+    }
+    ctx.fillStyle = l.color;
+    spacedFill(ctx, s, x, yAdj, m.sp, false);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  });
+  return m;
+}
+
+/* --- Score --- */
+function scoreDims(ctx, l){ return drawScore(ctx, l, false); }
+function drawScore(ctx, l, draw = true){
+  const W = 960, c = l.colors, R = 34;
+  const ms = l.matches.length ? l.matches : [{a:"", b:"", sa:"", sb:""}];
+  const out = [];   // liste d'ops différées (pour mesurer d'abord)
+  let y = 0;
+  const win = m => { const a = parseFloat(m.sa), b = parseFloat(m.sb); return isNaN(a)||isNaN(b)||a===b ? 0 : (a > b ? 1 : 2); };
+  // tag
+  if(l.tag && l.tag.trim()){
+    const t = l.tag.toUpperCase();
+    ctx.font = fontStr("Anton", 58);
+    const tw = ctx.measureText(t).width + 56, th = 86, ty = y;
+    out.push(() => {
+      ctx.save(); ctx.translate(W/2, ty + th/2); ctx.rotate(-0.035);
+      ctx.fillStyle = c.accent; rr(ctx, -tw/2, -th/2, tw, th, 16); ctx.fill();
+      ctx.fillStyle = c.ink; ctx.font = fontStr("Anton", 58); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(t, 0, 4); ctx.restore();
+    });
+    y += th + 22;
+  }
+  const subH = (l.sub && l.style !== "minimal") ? 62 : 0;
+  const drawSubIn = (py, ph) => {
+    if(!subH) return;
+    ctx.fillStyle = hexA(c.text, .12); ctx.fillRect(40, py + ph - subH, W - 80, 2);
+    fitFont(ctx, l.sub, "Inter", 34, W - 80);
+    ctx.fillStyle = hexA(c.text, .85); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(l.sub, W/2, py + ph - subH/2 + 1);
+  };
+  if(l.style === "hero"){
+    const m = ms[0], w = win(m);
+    if(l.label){
+      const ly = y;
+      out.push(() => {
+        const s = fitFont(ctx, l.label.toUpperCase(), "Barlow Condensed", 50, W - 40, true);
+        ctx.fillStyle = c.text; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(l.label.toUpperCase(), W/2, ly + 28);
+      });
+      y += 66;
+    }
+    const py = y, ph = 360 + subH;
+    out.push(() => {
+      ctx.fillStyle = hexA(c.panel, l.panelAlpha); rr(ctx, 0, py, W, ph, R); ctx.fill();
+      ctx.textBaseline = "alphabetic";
+      ctx.font = fontStr("Anton", 230);
+      ctx.fillStyle = w === 1 ? c.accent : c.text; ctx.textAlign = "right"; ctx.fillText(String(m.sa ?? ""), W/2 - 70, py + 250);
+      ctx.fillStyle = w === 2 ? c.accent : c.text; ctx.textAlign = "left";  ctx.fillText(String(m.sb ?? ""), W/2 + 70, py + 250);
+      ctx.fillStyle = hexA(c.text, .6); ctx.textAlign = "center"; ctx.font = fontStr("Anton", 120); ctx.fillText("–", W/2, py + 215);
+      [[m.a, W*.25], [m.b, W*.75]].forEach(([t, x]) => {
+        t = (t || "").toUpperCase();
+        fitFont(ctx, t, "Barlow Condensed", 54, W/2 - 60, false);
+        ctx.fillStyle = c.text; ctx.textAlign = "center"; ctx.fillText(t, x, py + 322);
+      });
+      drawSubIn(py, ph);
+    });
+    y += ph;
+  } else if(l.style === "list"){
+    const hh = l.label ? 96 : 0, rh = 118, ph = hh + ms.length * rh + 8 + subH;
+    const py = y;
+    out.push(() => {
+      ctx.fillStyle = hexA(c.panel, l.panelAlpha); rr(ctx, 0, py, W, ph, R); ctx.fill();
+      if(hh){
+        ctx.save(); rr(ctx, 0, py, W, ph, R); ctx.clip();
+        ctx.fillStyle = c.accent; ctx.fillRect(0, py, W, hh); ctx.restore();
+        fitFont(ctx, l.label.toUpperCase(), "Anton", 56, W - 60);
+        ctx.fillStyle = c.ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(l.label.toUpperCase(), W/2, py + hh/2 + 3);
+      }
+      ms.forEach((m, i) => {
+        const ry = py + hh + i * rh + 4, cy = ry + rh/2, w = win(m);
+        if(i > 0){ ctx.fillStyle = hexA(c.text, .12); ctx.fillRect(40, ry, W - 80, 2); }
+        ctx.textBaseline = "middle";
+        const ta = (m.a || "").toUpperCase(), tb = (m.b || "").toUpperCase();
+        fitFont(ctx, ta, "Barlow Condensed", 50, 300); ctx.textAlign = "right";
+        ctx.fillStyle = w === 2 ? hexA(c.text, .55) : c.text; ctx.fillText(ta, W/2 - 120, cy + 2);
+        fitFont(ctx, tb, "Barlow Condensed", 50, 300); ctx.textAlign = "left";
+        ctx.fillStyle = w === 1 ? hexA(c.text, .55) : c.text; ctx.fillText(tb, W/2 + 120, cy + 2);
+        ctx.fillStyle = hexA(c.text, .1); rr(ctx, W/2 - 98, cy - 40, 196, 80, 18); ctx.fill();
+        ctx.font = fontStr("Anton", 58); ctx.textAlign = "center";
+        ctx.fillStyle = w ? c.accent : c.text;
+        ctx.fillText(`${m.sa ?? ""} - ${m.sb ?? ""}`, W/2, cy + 4);
+      });
+      drawSubIn(py, ph);
+    });
+    y += ph;
+  } else { // minimal
+    if(l.label){
+      const ly = y;
+      out.push(() => {
+        fitFont(ctx, l.label.toUpperCase(), "Barlow Condensed", 52, W, true);
+        ctx.fillStyle = c.accent; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(l.label.toUpperCase(), W/2, ly + 30);
+      });
+      y += 72;
+    }
+    ms.forEach(m => {
+      const my = y;
+      out.push(() => {
+        const t = `${(m.a||"").toUpperCase()}  ${m.sa ?? ""}-${m.sb ?? ""}  ${(m.b||"").toUpperCase()}`;
+        fitFont(ctx, t, "Anton", 104, W);
+        ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 5;
+        ctx.fillStyle = c.text; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(t, W/2, my + 62);
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      });
+      y += 124;
+    });
+  }
+  if(l.sub && l.style === "minimal"){
+    y += 18; const sy = y;
+    out.push(() => {
+      fitFont(ctx, l.sub, "Inter", 36, W);
+      ctx.fillStyle = c.text; ctx.globalAlpha *= .9;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if(l.style === "minimal"){ ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 16; }
+      ctx.fillText(l.sub, W/2, sy + 22);
+      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+    });
+    y += 46;
+  }
+  const dims = {w: W, h: Math.max(y, 40)};
+  if(draw){
+    ctx.save(); ctx.translate(-dims.w/2, -dims.h/2);
+    out.forEach(f => { ctx.save(); f(); ctx.restore(); });
+    ctx.restore();
+  }
+  return dims;
+}
+
+/* --- Image --- */
+function imageDims(l){
+  const im = getImg(l.src);
+  const base = l.base || 600;
+  if(!im) return {w: base, h: base};
+  if(l.shape === "circle") return {w: base, h: base};
+  return {w: base, h: base * im.naturalHeight / im.naturalWidth};
+}
+function drawImageLayer(ctx, l){
+  const im = getImg(l.src);
+  const d = imageDims(l);
+  if(!im) return d;
+  const src = (l.tint && l.tintOn) ? tinted(l.src, im, l.tint) : im;
+  const x = -d.w/2, y = -d.h/2;
+  const pathFn = () => {
+    if(l.shape === "circle"){ ctx.beginPath(); ctx.arc(0, 0, d.w/2, 0, Math.PI*2); }
+    else if(l.shape === "rounded") rr(ctx, x, y, d.w, d.h, d.w * .07);
+    else { ctx.beginPath(); ctx.rect(x, y, d.w, d.h); }
+  };
+  ctx.save();
+  if(l.flip) ctx.scale(-1, 1);
+  if(l.shadow){
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+    if(l.shape === "none" && !l.border){ ctx.drawImage(src, x, y, d.w, d.h); ctx.restore(); ctx.restore(); return d; }
+    pathFn(); ctx.fillStyle = "#000"; ctx.fill(); ctx.restore();
+  }
+  ctx.save(); pathFn(); ctx.clip();
+  if(l.shape === "circle"){
+    const iw = im.naturalWidth, ih = im.naturalHeight, s = Math.max(d.w/iw, d.h/ih);
+    ctx.drawImage(src, -iw*s/2, -ih*s/2, iw*s, ih*s);
+  } else ctx.drawImage(src, x, y, d.w, d.h);
+  ctx.restore();
+  if(l.border){ pathFn(); ctx.lineWidth = l.border * 2; ctx.strokeStyle = l.borderColor; ctx.save(); ctx.clip(); ctx.stroke(); ctx.restore(); }
+  ctx.restore();
+  return d;
+}
+
+/* --- Fond --- */
+function bgAlign(bg, fmt){
+  if(!fmt || fmt === "9x16" || bg.kind === "color") return null;
+  return (bg.align && bg.align[fmt]) || (bg.kind === "asset" ? "bottom" : "center");
+}
+function drawBg(ctx, W, H, bg, fmt){
+  ctx.fillStyle = bg.color || "#101A3C"; ctx.fillRect(0, 0, W, H);
+  if(bg.kind !== "color" && bg.src){
+    const im = getImg(bg.src);
+    if(im){
+      const s = Math.max(W / im.naturalWidth, H / im.naturalHeight) * (bg.zoom || 1);
+      const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+      const x = (W - dw)/2 + (bg.ox || 0) * (dw - W)/2;
+      const oy = bgAlign(bg, fmt) === "bottom" ? -1 : (bg.oy || 0);
+      const y = (H - dh)/2 + oy * (dh - H)/2;
+      ctx.drawImage(im, x, y, dw, dh);
+    }
+  }
+  if(bg.veil > 0){
+    if(bg.veilMode === "uni"){ ctx.fillStyle = hexA(bg.veilColor, bg.veil); ctx.fillRect(0, 0, W, H); }
+    else {
+      const g = bg.veilMode === "bas" ? ctx.createLinearGradient(0, H*.35, 0, H) : ctx.createLinearGradient(0, H*.65, 0, 0);
+      g.addColorStop(0, hexA(bg.veilColor, 0)); g.addColorStop(1, hexA(bg.veilColor, Math.min(1, bg.veil * 1.3)));
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+  }
+}
+
+function layerDims(ctx, l){
+  if(l.type === "text") return measureText(ctx, l);
+  if(l.type === "score") return scoreDims(ctx, l);
+  return imageDims(l);
+}
+function renderDoc(ctx, W, H, d, fmt){
+  fmt = fmt || d.format;
+  drawBg(ctx, W, H, d.bg, fmt);
+  for(const l of d.layers){
+    if(l.hidden) continue;
+    const t = tf(l, fmt);
+    ctx.save();
+    ctx.globalAlpha = l.opacity ?? 1;
+    ctx.translate(t.x * W, t.y * H);
+    ctx.rotate(t.rot || 0);
+    ctx.scale(t.scale, t.scale);
+    let dm;
+    if(l.type === "text") dm = drawText(ctx, l);
+    else if(l.type === "score") dm = drawScore(ctx, l);
+    else dm = drawImageLayer(ctx, l);
+    l._w = dm.w; l._h = dm.h;
+    ctx.restore();
+  }
+}
+
+/* ============================================================
+   APERÇU
+   ============================================================ */
+const cv = document.getElementById("cv");
+const cx = cv.getContext("2d");
+let view = {k:1, cssW:0, cssH:0};
+function layoutCanvas(){
+  if(!doc) return;
+  const st = document.getElementById("stage").getBoundingClientRect();
+  const f = F(), pad = 16;
+  const k = Math.min((st.width - pad*2) / f.w, (st.height - 78 - pad*2) / f.h);
+  view.cssW = Math.max(50, Math.floor(f.w * k)); view.cssH = Math.max(50, Math.floor(f.h * k));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.style.width = view.cssW + "px"; cv.style.height = view.cssH + "px";
+  cv.width = Math.round(view.cssW * dpr); cv.height = Math.round(view.cssH * dpr);
+  view.k = cv.width / f.w;
+  requestRender();
+}
+let rq = false;
+function requestRender(){ if(!rq){ rq = true; requestAnimationFrame(() => { rq = false; render(); }); } }
+function render(){
+  if(!doc) return;
+  const f = F();
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  cx.clearRect(0, 0, cv.width, cv.height);
+  cx.setTransform(view.k, 0, 0, view.k, 0, 0);
+  renderDoc(cx, f.w, f.h, doc);
+  const px = 1 / view.k * (window.devicePixelRatio || 1);
+  // zones de sécurité stories
+  if(showSafe && doc.format === "9x16"){
+    cx.fillStyle = "rgba(255,90,78,.22)";
+    cx.fillRect(0, 0, f.w, 250); cx.fillRect(0, f.h - 340, f.w, 340);
+    cx.strokeStyle = "rgba(255,90,78,.9)"; cx.setLineDash([12*px, 8*px]); cx.lineWidth = 2*px;
+    cx.beginPath(); cx.moveTo(0, 250); cx.lineTo(f.w, 250); cx.moveTo(0, f.h-340); cx.lineTo(f.w, f.h-340); cx.stroke(); cx.setLineDash([]);
+  } else if(showSafe){
+    cx.strokeStyle = "rgba(255,90,78,.9)"; cx.setLineDash([12*px, 8*px]); cx.lineWidth = 2*px;
+    cx.strokeRect(60, 60, f.w - 120, f.h - 120); cx.setLineDash([]);
+  }
+  // guides
+  cx.strokeStyle = "#ff3fb4"; cx.lineWidth = 2*px;
+  if(guides.x){ cx.beginPath(); cx.moveTo(f.w/2, 0); cx.lineTo(f.w/2, f.h); cx.stroke(); }
+  if(guides.y){ cx.beginPath(); cx.moveTo(0, f.h/2); cx.lineTo(f.w, f.h/2); cx.stroke(); }
+  // sélection
+  const l = selLayer();
+  if(l && !l.hidden && l._w){
+    const T = tf(l), s = T.scale;
+    cx.save();
+    cx.translate(T.x * f.w, T.y * f.h); cx.rotate(T.rot || 0);
+    const w = l._w * s, h = l._h * s, m = 8 * px;
+    cx.strokeStyle = "#fff"; cx.lineWidth = 2*px; cx.setLineDash([8*px, 6*px]);
+    cx.strokeRect(-w/2 - m, -h/2 - m, w + m*2, h + m*2); cx.setLineDash([]);
+    cx.strokeStyle = "rgba(0,0,0,.35)"; cx.lineWidth = 1*px; cx.strokeRect(-w/2 - m - 1.5*px, -h/2 - m - 1.5*px, w + m*2 + 3*px, h + m*2 + 3*px);
+    if(!l.locked){
+      const hx = w/2 + m, hy = h/2 + m, r = 13 * px;
+      cx.fillStyle = "#FFC83D"; cx.strokeStyle = "#101A3C"; cx.lineWidth = 3*px;
+      cx.beginPath(); cx.arc(hx, hy, r, 0, Math.PI*2); cx.fill(); cx.stroke();
+      cx.strokeStyle = "#101A3C"; cx.lineWidth = 2.2*px;
+      cx.beginPath(); cx.arc(hx, hy, r*.5, -Math.PI*.9, Math.PI*.4); cx.stroke();
+      // croix de suppression (haut droite)
+      const dy = -h/2 - m;
+      cx.fillStyle = "#ff4d4d"; cx.strokeStyle = "#fff"; cx.lineWidth = 3*px;
+      cx.beginPath(); cx.arc(hx, dy, r, 0, Math.PI*2); cx.fill(); cx.stroke();
+      const q = r * .42; cx.lineWidth = 3*px; cx.lineCap = "round";
+      cx.beginPath(); cx.moveTo(hx - q, dy - q); cx.lineTo(hx + q, dy + q); cx.moveTo(hx + q, dy - q); cx.lineTo(hx - q, dy + q); cx.stroke();
+      cx.lineCap = "butt";
+    }
+    cx.restore();
+  }
+}
+
+/* ============================================================
+   GESTES
+   ============================================================ */
+const ptrs = new Map();
+let g = null; // geste en cours
+function toDoc(e){
+  const r = cv.getBoundingClientRect(), f = F();
+  return {x: (e.clientX - r.left) / r.width * f.w, y: (e.clientY - r.top) / r.height * f.h};
+}
+function hitLayer(p){
+  const f = F();
+  for(let i = doc.layers.length - 1; i >= 0; i--){
+    const l = doc.layers[i];
+    if(l.hidden || !l._w) continue;
+    const T = tf(l);
+    const dx = p.x - T.x * f.w, dy = p.y - T.y * f.h, a = -(T.rot || 0);
+    const lx = (dx * Math.cos(a) - dy * Math.sin(a)) / T.scale, ly = (dx * Math.sin(a) + dy * Math.cos(a)) / T.scale;
+    const pad = 14 / T.scale;
+    if(Math.abs(lx) <= l._w/2 + pad && Math.abs(ly) <= l._h/2 + pad) return l;
+  }
+  return null;
+}
+function handlePos(l){
+  const f = F(), m = 8 * (window.devicePixelRatio || 1) / view.k, T = tf(l);
+  const hx = l._w * T.scale / 2 + m, hy = l._h * T.scale / 2 + m, a = T.rot || 0;
+  return {x: T.x * f.w + hx * Math.cos(a) - hy * Math.sin(a), y: T.y * f.h + hx * Math.sin(a) + hy * Math.cos(a)};
+}
+function delPos(l){
+  const f = F(), m = 8 * (window.devicePixelRatio || 1) / view.k, T = tf(l);
+  const hx = l._w * T.scale / 2 + m, hy = -(l._h * T.scale / 2 + m), a = T.rot || 0;
+  return {x: T.x * f.w + hx * Math.cos(a) - hy * Math.sin(a), y: T.y * f.h + hx * Math.sin(a) + hy * Math.cos(a)};
+}
+function layerLabel(l){
+  if(l.type === "text") return "le texte « " + l.text.split("\n")[0].slice(0, 30) + " »";
+  if(l.type === "score") return "le bloc score";
+  return l.kind === "photo" ? "cette photo" : "l'élément « " + (l.name || "image") + " »";
+}
+async function askDelete(id){
+  const l = getLayer(id); if(!l) return;
+  if(await confirmBox("Supprimer ?", "Tu vas supprimer " + layerLabel(l) + ". Tu pourras toujours annuler.", "Supprimer")) removeLayer(id);
+}
+function snapRot(r){
+  const q = Math.PI / 2, n = Math.round(r / q) * q;
+  return Math.abs(r - n) < 0.05 ? n : r;
+}
+cv.addEventListener("pointerdown", e => {
+  cv.setPointerCapture(e.pointerId);
+  const p = toDoc(e);
+  ptrs.set(e.pointerId, p);
+  const f = F();
+  if(ptrs.size === 1){
+    const l = selLayer();
+    const docPerCss = f.w / view.cssW;
+    if(l && !l.locked && l._w){
+      const dp = delPos(l);
+      if(Math.hypot(p.x - dp.x, p.y - dp.y) < 26 * docPerCss){ ptrs.delete(e.pointerId); g = null; askDelete(l.id); return; }
+      const h = handlePos(l);
+      if(Math.hypot(p.x - h.x, p.y - h.y) < 26 * docPerCss){
+        const T = editT(l), cxp = T.x * f.w, cyp = T.y * f.h;
+        g = {mode:"handle", l, T, a0: Math.atan2(l._h/2, l._w/2), d0: Math.hypot(l._w/2, l._h/2), cx:cxp, cy:cyp, moved:false};
+        return;
+      }
+    }
+    const hit = hitLayer(p);
+    if(hit){
+      if(sel !== hit.id){ select(hit.id, true); }
+      if(hit.locked){ g = {mode:"tap", l:hit, moved:false}; return; }
+      const T = tf(hit);
+      g = {mode:"move", l:hit, T:null, ox: p.x - T.x * f.w, oy: p.y - T.y * f.h, moved:false, t:Date.now()};
+    } else {
+      if(sel){ select(null); }
+      g = {mode:"empty", moved:false};
+    }
+  } else if(ptrs.size === 2){
+    const l = selLayer();
+    if(!l || l.locked){ g = null; return; }
+    const [a, b] = [...ptrs.values()], T = editT(l);
+    g = {mode:"pinch", l, T, d0: Math.hypot(b.x - a.x, b.y - a.y), a0: Math.atan2(b.y - a.y, b.x - a.x),
+         c0: {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, s0: T.scale, r0: T.rot || 0, x0: T.x, y0: T.y, moved:false};
+  }
+});
+cv.addEventListener("pointermove", e => {
+  if(!ptrs.has(e.pointerId)) return;
+  const p = toDoc(e); ptrs.set(e.pointerId, p);
+  if(!g || g.mode === "empty" || g.mode === "tap") return;
+  const f = F();
+  if(!g.T) g.T = editT(g.l);
+  const l = g.T;
+  if(g.mode === "move" && ptrs.size === 1){
+    let nx = (p.x - g.ox) / f.w, ny = (p.y - g.oy) / f.h;
+    const th = 14 / f.w * (f.w / view.cssW) * 0.8;
+    guides.x = Math.abs(nx - .5) < th * 1.2; guides.y = Math.abs(ny - .5) < th * 1.2 * f.w / f.h;
+    if(guides.x) nx = .5; if(guides.y) ny = .5;
+    l.x = nx; l.y = ny; g.moved = true;
+  } else if(g.mode === "handle"){
+    const d = Math.hypot(p.x - g.cx, p.y - g.cy);
+    l.scale = Math.max(0.05, d / g.d0);
+    l.rot = snapRot(Math.atan2(p.y - g.cy, p.x - g.cx) - g.a0);
+    g.moved = true;
+  } else if(g.mode === "pinch" && ptrs.size >= 2){
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(b.x - a.x, b.y - a.y), an = Math.atan2(b.y - a.y, b.x - a.x);
+    const c = {x:(a.x + b.x)/2, y:(a.y + b.y)/2};
+    l.scale = Math.max(0.05, g.s0 * d / g.d0);
+    l.rot = snapRot(g.r0 + an - g.a0);
+    l.x = g.x0 + (c.x - g.c0.x) / f.w; l.y = g.y0 + (c.y - g.c0.y) / f.h;
+    g.moved = true;
+  }
+  requestRender();
+});
+function endPtr(e){
+  if(!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if(g && g.moved && ptrs.size === 0){ commit(); }
+  if(g && ptrs.size === 0){
+    if(g.moved || g.mode === "empty") setPanel(false);                    // on manipule : le panneau se replie, le visuel s'agrandit
+    else if((g.mode === "move" || g.mode === "tap") && g.l) openEditor(g.l); // simple toucher sur un calque : on rouvre son panneau
+  }
+  if(ptrs.size === 0){ g = null; guides = {x:false, y:false}; requestRender(); }
+  else if(ptrs.size === 1 && g && g.mode === "pinch"){
+    const l = g.l, T = g.T, f = F(), p = [...ptrs.values()][0];
+    g = {mode:"move", l, T, ox: p.x - T.x * f.w, oy: p.y - T.y * f.h, moved:true, t:0};
+  }
+}
+cv.addEventListener("pointerup", endPtr);
+cv.addEventListener("pointercancel", endPtr);
+cv.addEventListener("wheel", e => {
+  const l = selLayer(); if(!l || l.locked) return;
+  e.preventDefault();
+  const T = editT(l);
+  if(e.shiftKey) T.rot = (T.rot || 0) + e.deltaY * 0.002;
+  else T.scale = Math.max(0.05, T.scale * Math.exp(-e.deltaY * 0.0015));
+  requestRender(); clearTimeout(wheelT); wheelT = setTimeout(commit, 300);
+}, {passive:false});
+let wheelT;
+document.addEventListener("keydown", e => {
+  if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  const l = selLayer();
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if(!l) return;
+  if(e.key === "Delete" || e.key === "Backspace"){ askDelete(l.id); }
+  const st = e.shiftKey ? 10 : 1, f = F();
+  const mv = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[e.key];
+  if(mv && !l.locked){ e.preventDefault(); const T = editT(l); T.x += mv[0]*st/f.w; T.y += mv[1]*st/f.h; requestRender(); clearTimeout(wheelT); wheelT = setTimeout(commit, 300); }
+});
+
+/* ============================================================
+   HISTORIQUE / SAUVEGARDE
+   ============================================================ */
+const ser = d => JSON.stringify(d, (k, v) => k[0] === "_" ? undefined : v);
+function commit(){
+  const s = ser(proj);
+  schedThumb();
+  if(hist[hpos] === s) return;
+  hist = hist.slice(0, hpos + 1); hist.push(s);
+  if(hist.length > 60) hist.shift();
+  hpos = hist.length - 1;
+  updUndo(); save();
+}
+function undo(){ if(hpos > 0){ hpos--; setProj(JSON.parse(hist[hpos])); afterRestore(); } }
+function redo(){ if(hpos < hist.length - 1){ hpos++; setProj(JSON.parse(hist[hpos])); afterRestore(); } }
+function setProj(p){ proj = p; proj.cur = Math.max(0, Math.min(proj.cur || 0, proj.pages.length - 1)); doc = proj.pages[proj.cur]; }
+function afterRestore(){
+  renderPages();
+  if(sel && !getLayer(sel)) sel = null;
+  updUndo(); renderFormats(); layoutCanvas(); renderPanel(); renderCtx(); save();
+}
+function updUndo(){
+  document.getElementById("undo").disabled = hpos <= 0;
+  document.getElementById("redo").disabled = hpos >= hist.length - 1;
+}
+let saveT;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try{
+      localStorage.setItem("lutece-studio-proj", ser(proj));
+      try{ localStorage.setItem("lutece-studio-media", JSON.stringify(media)); }catch(e){}
+    }catch(e){}
+  }, 400);
+}
+function load(){
+  try{
+    const m = JSON.parse(localStorage.getItem("lutece-studio-media") || "{}");
+    Object.assign(media, m);
+    let p = JSON.parse(localStorage.getItem("lutece-studio-proj") || "null");
+    if(!p){ const d = JSON.parse(localStorage.getItem("lutece-studio-doc") || "null"); if(d && d.layers) p = {pages:[d], cur:0}; }
+    if(p && p.pages && p.pages.length){
+      p.pages.forEach(d => {
+        d.layers = d.layers.filter(l => !(l.src && l.src.startsWith("media:") && !media[l.src.slice(6)]));
+        if(d.bg.src && d.bg.src.startsWith("media:") && !media[d.bg.src.slice(6)]) d.bg.kind = "color";
+      });
+      return p;
+    }
+  }catch(e){}
+  return null;
+}
+
+/* ============================================================
+   CALQUES — CRÉATION / ACTIONS
+   ============================================================ */
+function baseLayer(type, extra){
+  return Object.assign({id:nid(), type, x:.5, y:.5, scale:1, rot:0, opacity:1, hidden:false, locked:false, af: doc ? doc.format : "9x16", fx:{}}, extra);
+}
+function textLayer(o = {}){
+  return baseLayer("text", Object.assign({name:"Texte", text:"MATCH DAY", font:"Anton", size:130, color:"#FFFFFF", bgColor:"#101A3C",
+    align:"center", style:"none", upper:true, italic:false, spacing:0, lh:1.05}, o));
+}
+function scoreLayer(o = {}){
+  return baseLayer("score", Object.assign({name:"Score", style:"hero", label:"Championnat de France", sub:"", tag:"",
+    matches:[{a:"Lutèce", b:"Adversaire", sa:"15", sb:"12"}],
+    colors:{panel:"#101A3C", accent:"#FFBB00", text:"#FFFFFF", ink:"#101A3C"}, panelAlpha:.92}, o));
+}
+function imageLayer(src, o = {}){
+  return baseLayer("image", Object.assign({name:"Image", src, base:600, shape:"none", border:0, borderColor:"#FFFFFF",
+    shadow:false, tintOn:false, tint:"#FFFFFF", flip:false}, o));
+}
+function addLayer(l){
+  doc.layers.push(l); sel = l.id; commit(); renderPanel(); renderCtx(); requestRender();
+}
+function removeLayer(id){
+  doc.layers = doc.layers.filter(l => l.id !== id);
+  if(sel === id) sel = null;
+  commit(); renderPanel(); renderCtx(); requestRender();
+}
+function dupLayer(id){
+  const l = getLayer(id); if(!l) return;
+  const c = JSON.parse(ser(l)); c.id = nid(); c.locked = false;
+  [c, ...Object.values(c.fx || {})].forEach(t => { t.x += .04; t.y += .03; });
+  const i = doc.layers.indexOf(l); doc.layers.splice(i + 1, 0, c); sel = c.id;
+  commit(); renderPanel(); renderCtx(); requestRender();
+}
+function moveLayer(id, dir){
+  const i = doc.layers.findIndex(l => l.id === id), j = i + dir;
+  if(i < 0 || j < 0 || j >= doc.layers.length) return;
+  [doc.layers[i], doc.layers[j]] = [doc.layers[j], doc.layers[i]];
+  commit(); renderPanel(); requestRender();
+}
+function select(id, fromCanvas){
+  sel = id;
+  const l = selLayer();
+  if(l && fromCanvas){
+    const t = l.type === "text" ? "text" : l.type === "score" ? "score" : (l.kind === "photo" ? "photo" : "el");
+    if(tab !== "layers") tab = t;
+    renderTabs();
+  }
+  renderPanel(); renderCtx(); requestRender();
+}
+const isMobile = () => window.innerWidth < 900;
+const IN_ANDROID_APP = /Android/.test(navigator.userAgent) && /; wv\)|Version\/[\d.]+ Chrome\/[\d.]+ Mobile/.test(navigator.userAgent);
+const APP_HINT = (IN_ANDROID_APP && window.claude) ? `<p class="hint" style="color:#ffb3ad">Dans l'appli Claude Android, la galerie ne s'ouvre pas. Ouvre ce lien dans Chrome pour importer tes photos.</p>` : "";
+function setPanel(open){
+  if(!isMobile() || panelOpen === open) return;
+  panelOpen = open; renderTabs(); requestAnimationFrame(layoutCanvas);
+}
+function openEditor(l, focus){
+  const t = l.type === "text" ? "text" : l.type === "score" ? "score" : (l.kind === "photo" ? "photo" : "el");
+  const changed = tab !== t || !panelOpen;
+  tab = t; panelOpen = true; renderTabs();
+  if(changed) renderPanel();
+  requestAnimationFrame(layoutCanvas);
+  if(focus && l.type === "text") setTimeout(() => { const t = document.querySelector("#panel textarea"); if(t){ t.focus(); t.select(); } }, 50);
+}
+
+/* ============================================================
+   UI : FORMATS / ONGLETS / BARRE CONTEXTUELLE
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function renderFormats(){
+  $("#formats").innerHTML = Object.entries(FORMATS).map(([k, f]) => `<button data-f="${k}" class="${doc.format === k ? "on" : ""}">${f.label}</button>`).join("");
+}
+$("#formats").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  proj.pages.forEach(pg => pg.format = b.dataset.f); renderFormats(); renderPages(); renderCtx(); if(tab === "bg") renderPanel(); layoutCanvas(); commit();
+});
+function renderTabs(){
+  $("#tabs").innerHTML = TABS.map(t => `<button data-t="${t.id}" class="${tab === t.id ? "on" : ""}">${ICONS[t.ic]}${t.label}</button>`).join("");
+  $("#panel").classList.toggle("closed", !panelOpen);
+}
+$("#tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  if(tab === b.dataset.t && window.innerWidth < 900) panelOpen = !panelOpen;
+  else { tab = b.dataset.t; panelOpen = true; }
+  renderTabs(); renderPanel(); requestAnimationFrame(layoutCanvas);
+});
+function renderCtx(){
+  const l = selLayer(), el = $("#ctx");
+  el.classList.toggle("show", !!l);
+  if(!l){ el.innerHTML = ""; requestAnimationFrame(layoutCanvas); return; }
+  el.innerHTML = `
+    <button data-c="edit">${ICONS.edit}Modifier</button>
+    <button data-c="dup">${ICONS.dup}Dupliquer</button>
+    <button data-c="front">${ICONS.up}Devant</button>
+    <button data-c="back">${ICONS.down}Derrière</button>
+    <button data-c="center">${ICONS.center}Centrer</button>
+    <button data-c="lock">${ICONS.lock}${l.locked ? "Déverrouiller" : "Verrouiller"}</button>
+    <button data-c="del" class="danger">${ICONS.trash}Supprimer</button>
+    ${l.fx && l.fx[doc.format] ? `<button data-c="reset">↺ Placement auto ${F().label}</button>` : ""}`;
+  requestAnimationFrame(layoutCanvas);
+}
+$("#ctx").addEventListener("click", e => {
+  const b = e.target.closest("button"), l = selLayer(); if(!b || !l) return;
+  const c = b.dataset.c;
+  if(c === "edit") openEditor(l, true);
+  if(c === "dup") dupLayer(l.id);
+  if(c === "front") moveLayer(l.id, 1);
+  if(c === "back") moveLayer(l.id, -1);
+  if(c === "center"){ const T = editT(l); T.x = .5; T.y = .5; T.rot = 0; commit(); requestRender(); }
+  if(c === "reset"){ delete l.fx[doc.format]; commit(); renderCtx(); requestRender(); toast("Placement automatique rétabli"); }
+  if(c === "lock"){ l.locked = !l.locked; commit(); renderCtx(); renderPanel(); requestRender(); }
+  if(c === "del") askDelete(l.id);
+});
+
+/* ============================================================
+   UI : PANNEAUX
+   ============================================================ */
+function swatches(key, val, extra = ""){
+  const cols = [...new Set([...PAL])];
+  return `<div class="sw" data-sw="${key}" ${extra}>${cols.map(c => `<button data-col="${c}" style="background:${c}" class="${(val||"").toLowerCase() === c.toLowerCase() ? "on" : ""}"></button>`).join("")}
+    <label class="custom" title="Autre couleur">+<input type="color" value="${val || "#ffffff"}" data-colin="${key}"></label></div>`;
+}
+function slider(key, label, min, max, step, val){
+  return `<div class="row"><label>${label}</label><input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
+}
+function pills(key, opts, val){
+  return `<div class="pills" data-pills="${key}">${opts.map(([v, t]) => `<button class="pill ${String(val) === String(v) ? "on" : ""}" data-v="${v}">${t}</button>`).join("")}</div>`;
+}
+function commonImageProps(l){
+  return `
+    <h3>Forme</h3>${pills("shape", [["none","Libre"],["rounded","Arrondi"],["circle","Rond"]], l.shape)}
+    <div class="sep"></div>
+    ${slider("opacity", "Opacité", 0.05, 1, 0.01, l.opacity)}
+    ${slider("border", "Contour", 0, 40, 1, l.border)}
+    ${l.border ? swatches("borderColor", l.borderColor) : ""}
+    <div class="row" style="margin-top:10px">${pills("shadow", [["false","Sans ombre"],["true","Ombre portée"]], l.shadow)}
+    <button class="pill" data-act="flip" style="margin-left:auto">↔ Miroir</button></div>`;
+}
+function renderPanel(){
+  const P = $("#panel"), l = selLayer();
+  let h = "";
+  if(tab === "tpl"){
+    h = `<h3>Partir d'un modèle</h3><div class="tpl">${TEMPLATES.map((t, i) => `<button data-tpl="${i}"><canvas data-tplc="${i}" width="180" height="320"></canvas><span>${t.name}</span></button>`).join("")}</div>
+      <p class="hint">Un modèle remplace les calques actuels (tu peux annuler). Glisse pour déplacer, pince pour zoomer/tourner, touche un calque pour le modifier.</p>`;
+  }
+  else if(tab === "bg"){
+    const bg = doc.bg;
+    h = `<h3>Bibliothèque de fonds</h3><div class="grid">${LIB.backgrounds.map(b => `<button class="thumb ${bg.kind === "asset" && bg.src === b.src ? "on" : ""}" data-bg="${esc(b.src)}"><img src="${esc(b.src)}" alt="" loading="lazy"><span class="lbl">${esc(b.name)}</span></button>`).join("") || '<div class="empty">Aucun fond dans la bibliothèque</div>'}</div>
+      <div class="sep"></div>
+      <label class="big ghost upl">${ICONS.upload} Ma photo en fond<input type="file" accept="image/*" data-upload="bg"></label>${APP_HINT}
+      <div class="sep"></div>
+      <h3>Couleur unie</h3>${swatches("bgColor", bg.kind === "color" ? bg.color : "")}
+      ${bgAlign(bg, doc.format) ? `<div class="sep"></div><h3>Alignement du fond en ${F().label}</h3>
+        ${pills("bgAlign", [["bottom","En bas (logo visible)"],["center","Centré"]], bgAlign(bg, doc.format))}` : ""}
+      ${bg.kind !== "color" ? `<div class="sep"></div><h3>Cadrage du fond</h3>
+        ${slider("bg.zoom", "Zoom", 1, 3, 0.01, bg.zoom)}
+        ${slider("bg.ox", "Horizontal", -1, 1, 0.01, bg.ox)}
+        ${bgAlign(bg, doc.format) !== "bottom" ? slider("bg.oy", "Vertical", -1, 1, 0.01, bg.oy) : ""}` : ""}
+      <div class="sep"></div><h3>Voile (lisibilité du texte)</h3>
+      ${pills("veilMode", [["uni","Uniforme"],["bas","Dégradé bas"],["haut","Dégradé haut"]], bg.veilMode)}
+      <div style="height:8px"></div>
+      ${slider("bg.veil", "Intensité", 0, 0.85, 0.01, bg.veil)}
+      ${swatches("veilColor", bg.veilColor)}`;
+  }
+  else if(tab === "photo"){
+    const ids = Object.keys(media);
+    const DEL = `<button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button>`;
+    h = (l && l.kind === "photo" ? `<h3>Photo sélectionnée ${DEL}</h3>${commonImageProps(l)}<div class="sep"></div>` : "") +
+      `<label class="big upl">${ICONS.upload} Importer des photos<input type="file" accept="image/*" multiple data-upload="layer"></label>${APP_HINT}
+      <p class="hint">Les photos importées s'ajoutent en calque. Touche une vignette pour la remettre sur le visuel.</p>
+      ${ids.length ? `<div class="sep"></div><h3>Mes photos <button class="pill" data-act="clearMedia">Vider</button></h3><div class="grid">${ids.map(id => `<div class="mwrap"><button class="thumb sq" data-media="${id}" style="width:100%"><img src="${media[id]}" alt=""></button><button class="delbtn" data-delmedia="${id}" title="Supprimer cette photo">${ICONS.trash}</button></div>`).join("")}</div>` : ""}`;
+  }
+  else if(tab === "el"){
+    const cats = [...new Set(LIB.elements.map(e => e.category || "Éléments"))];
+    h = (l && l.type === "image" && l.kind !== "photo" ? `<h3>Élément sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3>
+      ${(LIB.elements.find(e => e.src === l.src)?.tintable ?? l.tintable) !== false ? `<h3>Couleur</h3>${swatches("tint", l.tintOn ? l.tint : "")}<div style="height:8px"></div>` : ""}
+      ${slider("opacity", "Opacité", 0.05, 1, 0.01, l.opacity)}
+      <div class="row">${pills("shadow", [["false","Sans ombre"],["true","Ombre"]], l.shadow)}<button class="pill" data-act="flip" style="margin-left:auto">↔ Miroir</button></div>
+      <div class="sep"></div>` : "") +
+      (cats.map(c => `<h3>${esc(c)}</h3><div class="grid" style="margin-bottom:14px">${LIB.elements.filter(e => (e.category || "Éléments") === c).map(e => `<button class="thumb sq" data-elt="${esc(e.id)}"><img src="${esc(e.src)}" alt="" loading="lazy"><span class="lbl">${esc(e.name)}</span></button>`).join("")}</div>`).join("") || '<div class="empty">Aucun élément dans la bibliothèque</div>');
+  }
+  else if(tab === "text"){
+    if(l && l.type === "text"){
+      h = `<h3>Texte sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3><div class="stack"><textarea data-k="text" rows="2">${esc(l.text)}</textarea></div>
+        <div style="height:10px"></div>
+        <div class="fonts" data-pills="font">${FONTS.map(f => `<button class="pill ${l.font === f.fam ? "on" : ""}" data-v="${f.fam}" style="font-family:'${f.fam}';font-weight:${f.w}">${f.label}</button>`).join("")}</div>
+        <div style="height:10px"></div>
+        ${slider("size", "Taille", 30, 320, 1, l.size)}
+        <h3>Couleur</h3>${swatches("color", l.color)}
+        <div class="sep"></div>
+        <h3>Style</h3>${pills("style", [["none","Simple"],["box","Surligné"],["outline","Contour"],["shadow","Ombre"]], l.style)}
+        ${l.style === "box" || l.style === "outline" ? `<div style="height:10px"></div><h3>${l.style === "box" ? "Couleur du fond" : "Couleur du contour"}</h3>${swatches("bgColor", l.bgColor)}` : ""}
+        <div class="sep"></div>
+        <div class="row">${pills("align", [["left","Gauche"],["center","Centre"],["right","Droite"]], l.align)}</div>
+        <div class="row">${pills("upper", [["true","MAJUSCULES"],["false","Normal"]], l.upper)} ${pills("italic", [["false","Droit"],["true","Italique"]], l.italic)}</div>
+        ${slider("spacing", "Espacement", -5, 40, 1, l.spacing)}
+        ${slider("lh", "Interligne", 0.75, 1.6, 0.01, l.lh)}
+        ${slider("opacity", "Opacité", 0.05, 1, 0.01, l.opacity)}
+        <div class="sep"></div><button class="big ghost" data-act="addText">${ICONS.plus} Nouveau texte</button>`;
+    } else {
+      h = `<h3>Ajouter un texte</h3><div class="stack">
+        <button class="big" data-act="addTitle" style="font-family:Anton;font-weight:400;font-size:22px">GROS TITRE</button>
+        <button class="big ghost" data-act="addSub" style="font-family:'Barlow Condensed';font-style:italic;font-weight:800;font-size:19px">SOUS-TITRE</button>
+        <button class="big ghost" data-act="addBody" style="font-weight:600">Texte courant</button>
+        <button class="big ghost" data-act="addTag" style="font-family:'Permanent Marker';font-weight:400">Annotation feutre</button></div>`;
+    }
+  }
+  else if(tab === "score"){
+    if(l && l.type === "score"){
+      h = `<h3>Mise en forme <button class="delbtn" data-act="delSel" title="Supprimer ce bloc score">${ICONS.trash}</button></h3>${pills("style", [["hero","Grand score"],["list","Liste de matchs"],["minimal","Minimal"]], l.style)}
+        <div class="sep"></div>
+        <div class="stack">
+          <input class="txt" data-k="tag" placeholder="Bandeau (ex : VICTOIRE !)" value="${esc(l.tag)}">
+          <input class="txt" data-k="label" placeholder="Compétition / titre" value="${esc(l.label)}">
+        </div>
+        <div class="sep"></div>
+        <h3>${l.style === "hero" ? "Match" : "Matchs"}</h3>
+        ${l.matches.map((m, i) => `<div class="match" data-mi="${i}">
+          <input class="txt" data-m="a" value="${esc(m.a)}" placeholder="Équipe 1">
+          <input class="txt" data-m="sa" value="${esc(m.sa)}" inputmode="numeric" placeholder="0">
+          <input class="txt" data-m="sb" value="${esc(m.sb)}" inputmode="numeric" placeholder="0">
+          <input class="txt" data-m="b" value="${esc(m.b)}" placeholder="Équipe 2">
+          ${l.matches.length > 1 ? `<button class="delbtn" data-delm="${i}" title="Supprimer ce match">${ICONS.trash}</button>` : "<span></span>"}
+        </div>`).join("")}
+        ${l.style !== "hero" ? `<button class="big ghost" data-act="addMatch">${ICONS.plus} Ajouter un match</button>` : `<p class="hint">Astuce : le style « Liste » affiche plusieurs matchs (tournoi).</p>`}
+        <div style="height:10px"></div>
+        <input class="txt" data-k="sub" placeholder="Date, lieu… (optionnel)" value="${esc(l.sub)}">
+        <div class="sep"></div>
+        <h3>Couleur du panneau</h3>${swatches("c.panel", l.colors.panel)}
+        ${l.style !== "minimal" ? slider("panelAlpha", "Opacité", 0, 1, 0.01, l.panelAlpha) : ""}
+        <h3>Couleur d'accent (gagnant)</h3>${swatches("c.accent", l.colors.accent)}
+        <h3 style="margin-top:12px">Couleur du texte</h3>${swatches("c.text", l.colors.text)}
+        <div class="sep"></div><button class="big ghost" data-act="addScore">${ICONS.plus} Nouveau bloc score</button>`;
+    } else {
+      h = `<h3>Ajouter un résultat</h3><div class="stack">
+        <button class="big" data-act="addScore">${ICONS.score} Score d'un match</button>
+        <button class="big ghost" data-act="addScoreList">${ICONS.layers} Résultats d'un tournoi</button>
+        <button class="big ghost" data-act="addScoreMin">Score minimal</button></div>
+        <p class="hint">Le vainqueur est mis en couleur d'accent automatiquement.</p>`;
+    }
+  }
+  else if(tab === "layers"){
+    const ls = [...doc.layers].reverse();
+    h = `<h3>Calques <span style="text-transform:none;letter-spacing:0">${ls.length} · haut = devant</span></h3>` + (ls.map(x => {
+      const ic = x.type === "image" ? `<img src="${esc(resolveSrc(x.src))}" alt="">` : ICONS[x.type === "text" ? "text" : "score"];
+      const nm = x.type === "text" ? x.text.split("\n")[0] : x.type === "score" ? `Score · ${x.matches[0]?.a || ""} ${x.matches[0]?.sa || ""}-${x.matches[0]?.sb || ""}` : x.name;
+      return `<div class="layer ${sel === x.id ? "on" : ""}" data-lid="${x.id}">
+        <span class="grip" title="Glisser pour déplacer"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg></span>
+        <div class="ic">${ic}</div><div class="nm">${esc(nm)}</div>
+        <button data-la="vis" class="${x.hidden ? "off" : ""}" title="Afficher">${ICONS.eye}</button>
+        <button data-la="lock" class="${x.locked ? "" : "off"}" title="Verrouiller">${ICONS.lock}</button>
+        <button data-la="up" title="Monter">${ICONS.up}</button>
+        <button data-la="down" title="Descendre">${ICONS.down}</button>
+        <button data-la="del" title="Supprimer">${ICONS.trash}</button></div>`;
+    }).join("") || '<div class="empty">Aucun calque. Ajoute un texte, un score, une photo ou un élément.</div>');
+  }
+  P.innerHTML = h;
+  if(tab === "tpl") drawTplPreviews();
+}
+
+/* --- Événements des panneaux --- */
+function setPath(obj, key, val){
+  if(key.startsWith("bg.")) doc.bg[key.slice(3)] = val;
+  else if(key.startsWith("c.")) obj.colors[key.slice(2)] = val;
+  else obj[key] = val;
+}
+const P = $("#panel");
+P.addEventListener("input", e => {
+  const t = e.target, l = selLayer();
+  if(t.dataset.k){
+    const k = t.dataset.k;
+    const v = t.type === "range" ? parseFloat(t.value) : t.value;
+    if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) l[k] = v;
+    requestRender();
+  } else if(t.dataset.m && l){
+    const i = +t.closest("[data-mi]").dataset.mi; l.matches[i][t.dataset.m] = t.value; requestRender();
+  } else if(t.dataset.colin){
+    applyColor(t.dataset.colin, t.value, false);
+  }
+});
+P.addEventListener("change", e => {
+  const t = e.target;
+  if(t.dataset.colin){ applyColor(t.dataset.colin, t.value, true); return; }
+  if(t.dataset.k || t.dataset.m){ commit(); if(tab === "layers") renderPanel(); }
+});
+function applyColor(key, val, done){
+  const l = selLayer();
+  if(key === "bgColor" && tab === "bg"){ doc.bg.kind = "color"; doc.bg.color = val; }
+  else if(key === "veilColor"){ doc.bg.veilColor = val; }
+  else if(key === "tint" && l){ l.tint = val; l.tintOn = true; }
+  else if(l) setPath(l, key, val);
+  requestRender();
+  if(done){ commit(); renderPanel(); }
+}
+P.addEventListener("click", async e => {
+  const t = e.target.closest("button,[data-lid]"); if(!t) return;
+  const l = selLayer(), f = F();
+  // couleurs
+  if(t.dataset.col){ const k = t.closest("[data-sw]").dataset.sw; applyColor(k, t.dataset.col, true); return; }
+  // pills
+  const pg = t.closest("[data-pills]");
+  if(pg && t.dataset.v !== undefined){
+    const k = pg.dataset.pills; let v = t.dataset.v;
+    if(v === "true") v = true; else if(v === "false") v = false;
+    if(k === "veilMode"){ doc.bg.veilMode = v; if(!doc.bg.veil) doc.bg.veil = .5; }
+    else if(k === "bgAlign"){ doc.bg.align = doc.bg.align || {}; doc.bg.align[doc.format] = v; }
+    else if(l){
+      l[k] = v;
+      if(k === "style" && l.type === "score"){
+        if(v !== "hero" && l.matches.length < 2 && v === "list") l.matches.push({a:"Lutèce", b:"Adversaire", sa:"", sb:""});
+      }
+      if(k === "shape" && l.type === "image" && v !== "none" && l.kind === "photo" && !l.border){ /* rien */ }
+    }
+    commit(); renderPanel(); requestRender(); return;
+  }
+  // modèles
+  if(t.dataset.tpl !== undefined){ applyTemplate(+t.dataset.tpl); return; }
+  // fonds
+  if(t.dataset.bg){ Object.assign(doc.bg, {kind:"asset", src:t.dataset.bg, zoom:1, ox:0, oy:0}); commit(); renderPanel(); requestRender(); return; }
+  // éléments
+  if(t.dataset.elt){
+    const el = LIB.elements.find(x => x.id === t.dataset.elt);
+    const n = el.id === "signature"
+      ? imageLayer(el.src, {name:"Signature Lutèce", kind:"element", tintable:true, pin:"bottom", base:220.8, x:.5037, y:.942, af:"9x16"})
+      : imageLayer(el.src, {name: el.name, kind:"element", base: 380, tintable: el.tintable !== false, x: .5 + (Math.random() - .5) * .1, y: .5 + (Math.random() - .5) * .1});
+    addLayer(n); toast("Élément ajouté — glisse-le où tu veux"); return;
+  }
+  if(t.dataset.media){ addLayer(imageLayer("media:" + t.dataset.media, {name:"Photo", kind:"photo", base:700})); return; }
+  // calques
+  if(t.dataset.lid && !t.dataset.la){ select(t.dataset.lid); return; }
+  if(t.dataset.la){
+    const id = t.closest("[data-lid]").dataset.lid, x = getLayer(id);
+    if(t.dataset.la === "vis"){ x.hidden = !x.hidden; commit(); }
+    if(t.dataset.la === "lock"){ x.locked = !x.locked; commit(); renderCtx(); }
+    if(t.dataset.la === "up") moveLayer(id, 1);
+    if(t.dataset.la === "down") moveLayer(id, -1);
+    if(t.dataset.la === "del"){ askDelete(id); return; }
+    renderPanel(); requestRender(); return;
+  }
+  if(t.dataset.delm !== undefined && l){
+    const m = l.matches[+t.dataset.delm];
+    if(await confirmBox("Supprimer ce match ?", `${m.a || "?"} ${m.sa || ""}-${m.sb || ""} ${m.b || "?"}`, "Supprimer")){ l.matches.splice(+t.dataset.delm, 1); commit(); renderPanel(); requestRender(); }
+    return;
+  }
+  if(t.dataset.delmedia){
+    const id = t.dataset.delmedia, used = proj.pages.some(pg => pg.layers.some(x => x.src === "media:" + id) || pg.bg.src === "media:" + id);
+    if(await confirmBox("Supprimer cette photo ?", used ? "Elle est utilisée sur le visuel : elle en sera retirée aussi." : "Elle sera retirée de « Mes photos ».", "Supprimer")){
+      delete media[id];
+      proj.pages.forEach(pg => { pg.layers = pg.layers.filter(x => x.src !== "media:" + id); if(pg.bg.src === "media:" + id) pg.bg.kind = "color"; });
+      if(sel && !getLayer(sel)) sel = null;
+      commit(); renderPanel(); renderCtx(); requestRender();
+    }
+    return;
+  }
+  const a = t.dataset.act;
+  if(!a) return;
+  if(a === "addText") addLayer(textLayer({y:.3}));
+  if(a === "addTitle") addLayer(textLayer({text:"MATCH DAY", y:.25}));
+  if(a === "addSub") addLayer(textLayer({text:"Samedi · 14h", font:"Barlow Condensed", italic:true, size:80, y:.36}));
+  if(a === "addBody") addLayer(textLayer({text:"Venez nombreux !", font:"Inter", upper:false, size:52, y:.7}));
+  if(a === "addTag") addLayer(textLayer({text:"Allez Lutèce !", font:"Permanent Marker", upper:false, size:90, rot:-0.08, color:"#FFBB00", y:.75}));
+  if(a === "addScore") addLayer(scoreLayer({scale: .95}));
+  if(a === "addScoreList") addLayer(scoreLayer({style:"list", label:"Résultats du tournoi", scale:.95, matches:[{a:"Lutèce", b:"Équipe A", sa:"13", sb:"9"},{a:"Lutèce", b:"Équipe B", sa:"11", sb:"13"},{a:"Lutèce", b:"Équipe C", sa:"15", sb:"7"}]}));
+  if(a === "addScoreMin") addLayer(scoreLayer({style:"minimal", scale:.95}));
+  if(a === "addMatch" && l){ l.matches.push({a:"Lutèce", b:"", sa:"", sb:""}); commit(); renderPanel(); requestRender(); }
+  if(a === "delSel" && l){ askDelete(l.id); return; }
+  if(a === "flip" && l){ l.flip = !l.flip; commit(); requestRender(); }
+  if(a === "clearMedia"){
+    if(await confirmBox("Vider mes photos ?", "Les photos importées et leurs calques seront retirés.", "Vider")){
+      for(const k in media) delete media[k];
+      proj.pages.forEach(pg => { pg.layers = pg.layers.filter(x => !(x.src || "").startsWith("media:")); if((pg.bg.src || "").startsWith("media:")) Object.assign(pg.bg, {kind:"color"}); });
+      sel = null; commit(); renderPanel(); renderCtx(); requestRender();
+    }
+  }
+});
+
+/* --- Glisser-déposer dans la pile des calques --- */
+let ldrag = null;
+P.addEventListener("pointerdown", e => {
+  const grip = e.target.closest(".grip"); if(!grip) return;
+  e.preventDefault();
+  const row = grip.closest(".layer"), rows = [...P.querySelectorAll(".layer")];
+  const step = row.offsetHeight + 6;
+  ldrag = {row, rows, i: rows.indexOf(row), j: rows.indexOf(row), y0: e.clientY, step, id: row.dataset.lid};
+  row.classList.add("dragging");
+  rows.forEach(r => { if(r !== row) r.classList.add("shift"); });
+  grip.setPointerCapture(e.pointerId);
+});
+P.addEventListener("pointermove", e => {
+  if(!ldrag) return;
+  const d = ldrag, n = d.rows.length;
+  let dy = e.clientY - d.y0;
+  dy = Math.max(-d.i * d.step, Math.min((n - 1 - d.i) * d.step, dy));
+  d.row.style.transform = `translateY(${dy}px)`;
+  d.j = Math.max(0, Math.min(n - 1, d.i + Math.round(dy / d.step)));
+  d.rows.forEach((r, k) => {
+    if(r === d.row) return;
+    let t = 0;
+    if(d.j > d.i && k > d.i && k <= d.j) t = -d.step;
+    if(d.j < d.i && k < d.i && k >= d.j) t = d.step;
+    r.style.transform = t ? `translateY(${t}px)` : "";
+  });
+});
+function endLDrag(){
+  if(!ldrag) return;
+  const d = ldrag; ldrag = null;
+  if(d.j !== d.i){
+    const list = [...doc.layers].reverse();       // ordre affiché (haut = devant)
+    const [it] = list.splice(d.i, 1); list.splice(d.j, 0, it);
+    doc.layers = list.reverse();
+    commit(); requestRender();
+  }
+  renderPanel();
+}
+P.addEventListener("pointerup", endLDrag);
+P.addEventListener("pointercancel", endLDrag);
+
+/* --- Import fichiers --- */
+P.addEventListener("change", e => {
+  const inp = e.target.closest("input[data-upload]"); if(!inp) return;
+  const files = [...inp.files]; inp.value = "";
+  importFiles(files, inp.dataset.upload);
+});
+async function importFiles(files, pickMode){
+  if(!files.length) return;
+  toast("Import en cours…");
+  let n = 0, fails = 0, heic = false;
+  for(const file of files){
+    try{
+      const data = await readFileAsImage(file);
+      const id = "m" + Date.now().toString(36) + (n++);
+      media[id] = data;
+      if(pickMode === "bg"){
+        Object.assign(doc.bg, {kind:"media", src:"media:" + id, zoom:1, ox:0, oy:0});
+        commit();
+      } else {
+        const ly = imageLayer("media:" + id, {name:"Photo", kind:"photo", base:700, x:.5 + n*.03, y:.5 + n*.03});
+        doc.layers.push(ly); sel = ly.id;
+      }
+    }catch(err){ fails++; if(err.message === "heic") heic = true; }
+  }
+  if(n && pickMode === "layer") commit();
+  save(); renderPanel(); renderCtx(); requestRender();
+  if(!n) toast(heic ? "Format HEIC non lu : exporte la photo en JPG" : "Impossible de lire cette image");
+  else toast((pickMode === "bg" ? "Fond mis à jour" : (n > 1 ? n + " photos ajoutées" : "Photo ajoutée")) + (fails ? ` (${fails} échec${fails > 1 ? "s" : ""})` : ""));
+}
+
+/* ============================================================
+   MODÈLES
+   ============================================================ */
+const bgSrc = i => LIB.backgrounds[i % Math.max(1, LIB.backgrounds.length)]?.src || null;
+const TEMPLATES = [
+  {name:"Résultat de match", make: () => ({bg:{kind:"asset", src:bgSrc(2)}, layers:[
+    textLayer({text:"RÉSULTAT", size:170, y:.2}),
+    textLayer({text:"Championnat de France · J3", font:"Barlow Condensed", italic:true, size:62, color:"#FFBB00", y:.28}),
+    scoreLayer({label:"", tag:"Victoire !", y:.52, scale:.95}),
+    imageLayer(LIB.elements.find(e => e.id === "stelly-revers")?.src, {kind:"element", name:"Stelly", base:380, x:.75, y:.71, scale:1.15})
+  ]})},
+  {name:"Résultats tournoi", make: () => ({bg:{kind:"asset", src:bgSrc(1)}, layers:[
+    textLayer({text:"WEEK-END\nDE TOURNOI", size:150, color:"#FFFFFF", y:.24, lh:.95}),
+    scoreLayer({style:"list", label:"Open de Paris", sub:"Samedi & dimanche · Paris 13e", y:.58, scale:.95,
+      colors:{panel:"#0A0A0A", accent:"#FFBB00", text:"#FFFFFF", ink:"#0A0A0A"}, panelAlpha:.55,
+      matches:[{a:"Lutèce", b:"Équipe A", sa:"13", sb:"9"},{a:"Lutèce", b:"Équipe B", sa:"11", sb:"13"},{a:"Lutèce", b:"Équipe C", sa:"15", sb:"7"},{a:"Lutèce", b:"Équipe D", sa:"12", sb:"10"}]})
+  ]})},
+  {name:"Match day", make: () => ({bg:{kind:"asset", src:bgSrc(0)}, layers:[
+    textLayer({text:"MATCH\nDAY", size:250, color:"#00543C", y:.42, lh:.9}),
+    textLayer({text:"Lutèce vs Adversaire", font:"Barlow Condensed", italic:true, size:84, style:"box", bgColor:"#00543C", y:.62}),
+    textLayer({text:"Samedi 14h · Stade Charléty", font:"Inter", upper:false, size:46, color:"#00543C", y:.7}),
+    imageLayer(LIB.elements.find(e => e.id === "stelly-sky")?.src, {kind:"element", name:"Stelly", base:380, x:.76, y:.17, scale:.95})
+  ]})},
+  {name:"Photo + score", make: () => ({bg:{kind:"asset", src:bgSrc(2), veil:.6, veilMode:"bas"}, layers:[
+    textLayer({text:"Remplace le fond par ta photo", font:"Inter", upper:false, size:54, style:"box", bgColor:"#EF3E36", y:.12}),
+    scoreLayer({style:"hero", label:"Finale régionale", tag:"", y:.66, scale:.95, panelAlpha:.85}),
+    imageLayer(LIB.elements.find(e => e.id === "signature")?.src, {kind:"element", name:"Signature Lutèce", tintable:true, pin:"bottom", base:220.8, x:0.5037, y:0.9420})
+  ]})}
+];
+function applyTemplateTo(d, i){
+  const t = TEMPLATES[i].make();
+  d.bg = Object.assign({kind:"asset", src:null, color:"#101A3C", zoom:1, ox:0, oy:0, veil:0, veilMode:"uni", veilColor:"#000000"}, t.bg);
+  d.layers = t.layers;
+  d.layers.forEach(l => { l.af = "9x16"; l.fx = {}; });
+}
+async function applyTemplate(i){
+  if(doc.layers.length && !(await confirmBox("Remplacer le visuel ?", "Les calques actuels seront remplacés par le modèle « " + TEMPLATES[i].name + " ». Tu pourras annuler.", "Remplacer"))) return;
+  applyTemplateTo(doc, i); sel = null;
+  commit(); renderCtx(); requestRender();
+  if(i === 3){ tab = "bg"; renderTabs(); }
+  renderPanel();
+  toast("Modèle appliqué");
+}
+function drawTplPreviews(){
+  document.querySelectorAll("[data-tplc]").forEach(c => {
+    const i = +c.dataset.tplc, d = {format:"9x16", bg:null, layers:[]};
+    applyTemplateTo(d, i);
+    const x = c.getContext("2d"), s = c.width / 1080;
+    const paint = () => { x.setTransform(s, 0, 0, s, 0, 0); renderDoc(x, 1080, 1920, d, "9x16"); };
+    paint(); setTimeout(paint, 400); setTimeout(paint, 1200);
+  });
+}
+
+/* ============================================================
+   PAGES (carrousel / plusieurs visuels)
+   ============================================================ */
+function renderPages(){
+  const box = $("#pthumbs"), f = F(), h = 56, w = Math.round(h * f.w / f.h);
+  box.innerHTML = proj.pages.map((pg, i) => `<button class="pth ${i === proj.cur ? "on" : ""}" data-pg="${i}" style="width:${w + 4}px"><canvas width="${w * 2}" height="${h * 2}" style="width:${w}px"></canvas><b>${i + 1}</b></button>`).join("");
+  proj.pages.forEach((pg, i) => drawThumb(i));
+  const on = box.querySelector(".pth.on"); if(on) on.scrollIntoView({block:"nearest", inline:"nearest"});
+}
+function drawThumb(i){
+  const c = $("#pthumbs").querySelector(`[data-pg="${i}"] canvas`); if(!c) return;
+  const pg = proj.pages[i], f = FORMATS[pg.format], x = c.getContext("2d"), s = c.width / f.w;
+  x.setTransform(s, 0, 0, s, 0, 0); renderDoc(x, f.w, f.h, pg, pg.format);
+}
+let thumbT;
+function schedThumb(){ clearTimeout(thumbT); thumbT = setTimeout(() => { if(proj) drawThumb(proj.cur); }, 250); }
+function switchPage(i){
+  if(i === proj.cur || i < 0 || i >= proj.pages.length) return;
+  proj.cur = i; doc = proj.pages[i]; sel = null;
+  renderPages(); renderPanel(); renderCtx(); layoutCanvas(); save();
+}
+function addPage(copy){
+  const np = copy ? JSON.parse(ser(doc)) : {format:doc.format, bg:JSON.parse(JSON.stringify(doc.bg)), layers:[]};
+  if(copy) np.layers.forEach(l => l.id = nid());
+  else { const sig = doc.layers.find(l => l.pin === "bottom"); if(sig){ const c = JSON.parse(ser(sig)); c.id = nid(); np.layers.push(c); } }
+  proj.pages.splice(proj.cur + 1, 0, np);
+  proj.cur++; doc = np; sel = null;
+  commit(); renderPages(); renderPanel(); renderCtx(); layoutCanvas();
+  toast(copy ? "Page dupliquée" : "Nouvelle page " + (proj.cur + 1));
+}
+async function deletePage(){
+  if(proj.pages.length < 2){ toast("Il faut garder au moins une page"); return; }
+  if(!(await confirmBox("Supprimer la page " + (proj.cur + 1) + " ?", "La page et tous ses calques seront supprimés. Tu pourras annuler.", "Supprimer"))) return;
+  proj.pages.splice(proj.cur, 1);
+  proj.cur = Math.min(proj.cur, proj.pages.length - 1); doc = proj.pages[proj.cur]; sel = null;
+  commit(); renderPages(); renderPanel(); renderCtx(); layoutCanvas();
+}
+function movePage(dir){
+  const i = proj.cur, j = i + dir;
+  if(j < 0 || j >= proj.pages.length) return;
+  [proj.pages[i], proj.pages[j]] = [proj.pages[j], proj.pages[i]];
+  proj.cur = j; commit(); renderPages();
+}
+async function newProject(){
+  if(!(await confirmBox("Tout recommencer ?", "Toutes les pages seront remplacées par une page vierge. Tu pourras annuler.", "Supprimer"))) return;
+  const d = newDoc(); d.format = doc.format; applyTemplateTo(d, 0);
+  proj.pages = [d]; proj.cur = 0; doc = d; sel = null;
+  commit(); renderPages(); renderPanel(); renderCtx(); layoutCanvas();
+}
+$("#pthumbs").addEventListener("click", e => { const b = e.target.closest("[data-pg]"); if(b) switchPage(+b.dataset.pg); });
+$("#pAdd").addEventListener("click", () => {
+  openModal(`<h2>Ajouter une page</h2><p>Idéal pour un carrousel ou une série de stories. La nouvelle page se place après la page ${proj.cur + 1}.</p>
+    <div class="stack"><button class="big" data-pa="blank">Page vierge <small>même fond</small></button>
+    <button class="big ghost" data-pa="dup">Dupliquer cette page <small>avec ses calques</small></button>
+    <button class="big ghost" data-pa="x">Annuler</button></div>`);
+  $("#modalCard").onclick = e => { const b = e.target.closest("[data-pa]"); if(!b) return; closeModal(); if(b.dataset.pa !== "x") addPage(b.dataset.pa === "dup"); };
+});
+$("#pMenu").addEventListener("click", () => {
+  const n = proj.pages.length, i = proj.cur;
+  openModal(`<h2>Page ${i + 1} / ${n}</h2><p>Les pages partagent le même format. Chaque page a son fond et ses calques.</p>
+    <div class="stack">
+      <div class="row" style="margin:0"><button class="big ghost" data-pm="left" ${i === 0 ? "disabled style='opacity:.4'" : ""}>← Avancer</button><button class="big ghost" data-pm="right" ${i === n - 1 ? "disabled style='opacity:.4'" : ""}>Reculer →</button></div>
+      <button class="big ghost" data-pm="dup">${ICONS.dup} Dupliquer la page</button>
+      <button class="big danger" data-pm="del" ${n < 2 ? "disabled style='opacity:.4'" : ""}>${ICONS.trash} Supprimer la page</button>
+      <button class="big ghost" data-pm="reset">Tout recommencer</button>
+      <button class="big ghost" data-pm="x">Fermer</button>
+    </div>`);
+  $("#modalCard").onclick = e => {
+    const b = e.target.closest("[data-pm]"); if(!b || b.disabled) return;
+    const a = b.dataset.pm; closeModal();
+    if(a === "left") movePage(-1); if(a === "right") movePage(1);
+    if(a === "dup") addPage(true); if(a === "del") deletePage(); if(a === "reset") newProject();
+  };
+});
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+function renderToBlob(fmt, type, pg){
+  pg = pg || doc;
+  return new Promise(res => {
+    const f = FORMATS[fmt], c = document.createElement("canvas");
+    c.width = f.w; c.height = f.h;
+    const x = c.getContext("2d");
+    renderDoc(x, f.w, f.h, pg, fmt);
+    c.toBlob(b => res(b), type, 0.92);
+  });
+}
+let dl = null;
+(async () => { try{ if(window.claude && claude.use) dl = await claude.use("downloads"); }catch(e){ dl = null; } })();
+async function saveBlob(blob, name){
+  if(dl){
+    try{ await dl.save({filename:name, data:blob}); return true; }
+    catch(err){ if(err && err.code === "declined") return false; if(err && err.code === "rate_limited"){ await new Promise(r => setTimeout(r, 1500)); return saveBlob(blob, name); } }
+  }
+  return anchorDownload(blob, name);
+}
+function anchorDownload(blob, name){
+  try{
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+    return true;
+  }catch(err){ return false; }
+}
+const IS_TOUCH_DEVICE = /Android|iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function canShareFiles(files){
+  try{ return !!(navigator.canShare && navigator.canShare({files})); }catch(e){ return false; }
+}
+// Hors de Claude, sur téléphone : une seule feuille de partage pour tous les visuels (« Enregistrer les images »).
+// Elle s'ouvre depuis un bouton, car le partage exige un toucher récent de l'utilisateur.
+function offerShare(list){
+  const files = list.map(f => new File([f.blob], f.name, {type: f.blob.type}));
+  const n = files.length;
+  openModal(`<h2>${n > 1 ? n + " visuels prêts" : "Visuel prêt"}</h2><p>Touche « Enregistrer » puis choisis « Enregistrer ${n > 1 ? "les images" : "l'image"} » (ou une appli) dans le menu du téléphone.</p>
+    <div class="stack"><button class="big" data-sh="share">Enregistrer / partager</button>
+    <button class="big ghost" data-sh="dl">Télécharger les fichiers</button>
+    <button class="big ghost" data-sh="x">Fermer</button></div>`);
+  $("#modalCard").onclick = async e => {
+    const b = e.target.closest("[data-sh]"); if(!b) return;
+    if(b.dataset.sh === "x") return closeModal();
+    if(b.dataset.sh === "dl"){
+      closeModal();
+      for(const f of list){ anchorDownload(f.blob, f.name); await new Promise(r => setTimeout(r, 400)); }
+      toast(n > 1 ? n + " fichiers téléchargés" : "Fichier téléchargé"); return;
+    }
+    try{ await navigator.share({files}); closeModal(); toast(n > 1 ? n + " visuels exportés" : "Visuel exporté"); }
+    catch(err){ if(!err || err.name !== "AbortError") toast("Partage impossible : utilise « Télécharger les fichiers »"); }
+  };
+}
+
+function stamp(){ const d = new Date(); return d.toISOString().slice(0, 10); }
+async function doExport(fmts, type, allPages){
+  closeModal();
+  const ext = type === "image/png" ? "png" : "jpg";
+  const prevSel = sel; sel = null; render();
+  const idx = allPages ? proj.pages.map((_, i) => i) : [proj.cur];
+  const multi = proj.pages.length > 1;
+  const files = [];
+  for(const i of idx) for(const fm of fmts){
+    toast("Préparation " + (multi ? "page " + (i + 1) + " · " : "") + FORMATS[fm].label + "…");
+    const b = await renderToBlob(fm, type, proj.pages[i]);
+    files.push({blob:b, name:`lutece_${fm}${multi ? "_p" + String(i + 1).padStart(2, "0") : ""}_${stamp()}.${ext}`});
+  }
+  sel = prevSel; requestRender();
+  if(!dl && IS_TOUCH_DEVICE && canShareFiles(files.map(f => new File([f.blob], f.name, {type: f.blob.type})))){ offerShare(files); return; }
+  let ok = 0;
+  for(const f of files){ if(await saveBlob(f.blob, f.name)) ok++; if(!dl) await new Promise(r => setTimeout(r, 400)); }
+  toast(ok ? (ok > 1 ? ok + " visuels exportés" : "Visuel exporté") : "Export annulé");
+}
+$("#exportBtn").addEventListener("click", () => {
+  let type = "image/png", allPages = proj.pages.length > 1;
+  const n = proj.pages.length;
+  openModal(`<h2>Exporter</h2><p>Chaque format s'adapte automatiquement. Ce que tu déplaces dans un format n'affecte que celui-là : pense à vérifier les 3 avant d'exporter.</p>
+    ${n > 1 ? `<h3>Pages</h3><div class="pills" id="exPages" style="margin-bottom:14px"><button class="pill on" data-v="all">Toutes (${n})</button><button class="pill" data-v="cur">Page ${proj.cur + 1} seulement</button></div>` : ""}
+    <h3>Fichiers</h3>
+    <div class="pills" id="exType" style="margin-bottom:14px"><button class="pill on" data-v="image/png">PNG (qualité max)</button><button class="pill" data-v="image/jpeg">JPG (plus léger)</button></div>
+    <div class="stack">
+      <button class="big" data-ex="cur">Format actuel <small>${F().label} · ${F().w}×${F().h}</small></button>
+      <button class="big ghost" data-ex="all">Les 3 formats <small>9:16 · 4:5 · 1:1</small></button>
+      <button class="big ghost" data-ex="cancel">Annuler</button>
+    </div>`);
+  const card = $("#modalCard");
+  card.onclick = e => {
+    const p = e.target.closest(".pills .pill");
+    if(p){
+      const g = p.parentElement; g.querySelectorAll(".pill").forEach(x => x.classList.toggle("on", x === p));
+      if(g.id === "exType") type = p.dataset.v;
+      if(g.id === "exPages") allPages = p.dataset.v === "all";
+      return;
+    }
+    const b = e.target.closest("[data-ex]"); if(!b) return;
+    if(b.dataset.ex === "cancel") return closeModal();
+    doExport(b.dataset.ex === "all" ? Object.keys(FORMATS) : [doc.format], type, allPages);
+  };
+});
+
+/* ============================================================
+   MODALE / TOAST
+   ============================================================ */
+let modalAt = 0;
+function openModal(html){ $("#modalCard").innerHTML = html; $("#modal").classList.add("show"); modalAt = performance.now(); }
+// Ignore le « clic fantôme » envoyé par les mobiles juste après un toucher qui a ouvert la fenêtre
+$("#modal").addEventListener("click", e => { if(performance.now() - modalAt < 450){ e.stopPropagation(); e.preventDefault(); } }, true);
+function closeModal(){ $("#modal").classList.remove("show"); $("#modalCard").onclick = null; }
+$("#modal").addEventListener("click", e => { if(e.target.id === "modal") closeModal(); });
+function confirmBox(title, text, ok){
+  return new Promise(res => {
+    openModal(`<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="stack"><button class="big ${/Supprimer|Vider/.test(ok) ? "danger" : ""}" data-r="1">${esc(ok)}</button><button class="big ghost" data-r="0">Annuler</button></div>`);
+    $("#modalCard").onclick = e => { const b = e.target.closest("[data-r]"); if(!b) return; closeModal(); res(b.dataset.r === "1"); };
+  });
+}
+let toastT;
+function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800); }
+
+/* ============================================================
+   DÉMARRAGE
+   ============================================================ */
+$("#undo").onclick = undo; $("#redo").onclick = redo;
+$("#safeBtn").onclick = () => { showSafe = !showSafe; $("#safeBtn").classList.toggle("on", showSafe); requestRender(); };
+new ResizeObserver(() => layoutCanvas()).observe($("#stage"));
+
+async function init(){
+  try{
+    const r = await fetch("assets/manifest.json", {cache:"no-cache"});
+    if(r.ok) LIB = await r.json();
+  }catch(e){}
+  PAL = LIB.palette && LIB.palette.length ? LIB.palette : FALLBACK_MANIFEST.palette;
+  const saved = load();
+  if(saved){
+    saved.pages.forEach(d => {
+      if(d.bg.kind === "asset" && !LIB.backgrounds.some(b => b.src === d.bg.src)) d.bg.src = LIB.backgrounds[0]?.src || null;
+      d.layers = d.layers.filter(l => !(l.type === "image" && (l.src || "").startsWith("assets/") && !LIB.elements.some(e => e.src === l.src)));
+    });
+    setProj(saved);
+  }
+  else { const d = newDoc(); applyTemplateTo(d, 0); setProj({pages:[d], cur:0}); }
+  hist = [ser(proj)]; hpos = 0; updUndo();
+  renderFormats(); renderTabs(); renderPanel(); renderCtx(); renderPages(); layoutCanvas();
+  try{
+    await Promise.all(FONTS.map(f => document.fonts.load(fontStr(f.fam, 40))).concat([document.fonts.load(fontStr("Barlow Condensed", 40, true)), document.fonts.load(fontStr("Inter", 40))]));
+  }catch(e){}
+  requestRender(); renderPages();
+  if(tab === "tpl") drawTplPreviews();
+}
+init();
+// Hors de Claude (GitHub Pages) : appli installable et utilisable hors ligne
+if("serviceWorker" in navigator && !window.claude && location.protocol === "https:"){
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+</script>
+</body>
+</html>
