@@ -1,6 +1,6 @@
 // Lutèce Studio — cache hors ligne
 // Change VERSION à chaque mise en ligne pour forcer la mise à jour des fichiers.
-const VERSION = "ls-1";
+const VERSION = "ls-2";
 const FILES = [
   "./",
   "index.html",

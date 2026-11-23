@@ -138,6 +138,17 @@ textarea{resize:vertical;min-height:70px}
 .tpl button{border:2px solid var(--line);background:var(--panel2);border-radius:14px;padding:0;overflow:hidden;text-align:left}
 .tpl canvas{width:100%;display:block;aspect-ratio:9/16;background:#000}
 .tpl span{display:block;padding:8px 10px;font-weight:700;font-size:13px}
+.drafts{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-top:12px}
+.draft{position:relative;border:2px solid var(--line);background:var(--panel2);border-radius:12px;padding:0;overflow:hidden;text-align:left}
+.draft.on{border-color:var(--accent)}
+.draft .th{aspect-ratio:9/16;background:#000 center/cover no-repeat;display:block}
+.draft .meta{display:block;padding:6px 8px}
+.draft .meta b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.draft .meta i{display:block;font-style:normal;font-size:11px;color:var(--muted)}
+.draft .delbtn{position:absolute;top:4px;right:4px;width:28px;height:28px;background:rgba(10,12,24,.8)}
+.dstatus{display:flex;align-items:center;gap:8px;background:var(--panel2);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:13px}
+.dstatus b{color:var(--accent)}
+.dstatus span{flex:1;min-width:0}
 .hint{color:var(--muted);font-size:12.5px;margin:8px 0 0}
 .empty{color:var(--muted);text-align:center;padding:14px;font-size:13px}
 /* modal + toast */
@@ -877,31 +888,178 @@ function updUndo(){
   document.getElementById("undo").disabled = hpos <= 0;
   document.getElementById("redo").disabled = hpos >= hist.length - 1;
 }
-let saveT;
+/* --- Stockage sur l'appareil : IndexedDB (photos comprises), repli localStorage --- */
+const IDB = (() => {
+  let dbp = null;
+  function open(){
+    if(!dbp) dbp = new Promise((res, rej) => {
+      try{
+        const r = indexedDB.open("lutece-studio", 1);
+        r.onupgradeneeded = () => { const d = r.result; d.createObjectStore("kv"); d.createObjectStore("drafts", {keyPath:"id"}); };
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      }catch(e){ rej(e); }
+    });
+    return dbp;
+  }
+  async function tx(store, mode, fn){
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, mode), rq = fn(t.objectStore(store));
+      t.oncomplete = () => res(rq ? rq.result : undefined); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  }
+  return {
+    get: k => tx("kv", "readonly", st => st.get(k)),
+    set: (k, v) => tx("kv", "readwrite", st => st.put(v, k)),
+    drafts: () => tx("drafts", "readonly", st => st.getAll()),
+    getDraft: id => tx("drafts", "readonly", st => st.get(id)),
+    putDraft: d => tx("drafts", "readwrite", st => st.put(d)),
+    delDraft: id => tx("drafts", "readwrite", st => st.delete(id))
+  };
+})();
+let curDraft = null;      // {id, name} : brouillon lié au visuel en cours (mis à jour automatiquement)
+let mediaDirty = false;
+let saveT, draftT;
 function save(){
   clearTimeout(saveT);
-  saveT = setTimeout(() => {
+  saveT = setTimeout(async () => {
+    const snap = ser(proj);
     try{
-      localStorage.setItem("lutece-studio-proj", ser(proj));
-      try{ localStorage.setItem("lutece-studio-media", JSON.stringify(media)); }catch(e){}
-    }catch(e){}
+      await IDB.set("current", {proj: snap, draft: curDraft});
+      if(mediaDirty){ await IDB.set("media", media); mediaDirty = false; }
+    }catch(e){
+      try{ localStorage.setItem("lutece-studio-proj", snap); localStorage.setItem("lutece-studio-media", JSON.stringify(media)); }catch(e2){}
+    }
   }, 400);
+  if(curDraft){ clearTimeout(draftT); draftT = setTimeout(() => writeDraft().catch(() => {}), 1200); }
 }
-function load(){
+function usedMedia(p){
+  const out = {}, add = src => { if(src && src.startsWith("media:") && media[src.slice(6)]) out[src.slice(6)] = media[src.slice(6)]; };
+  p.pages.forEach(pg => { add(pg.bg.src); pg.layers.forEach(l => add(l.src)); });
+  return out;
+}
+function draftThumb(){
+  const pg = proj.pages[0], f = FORMATS[pg.format], c = document.createElement("canvas");
+  c.width = 216; c.height = Math.round(216 * f.h / f.w);
+  const x = c.getContext("2d"), k = c.width / f.w; x.setTransform(k, 0, 0, k, 0, 0);
+  renderDoc(x, f.w, f.h, pg, pg.format);
+  return c.toDataURL("image/jpeg", .75);
+}
+async function writeDraft(){
+  if(!curDraft) return;
+  await IDB.putDraft({id: curDraft.id, name: curDraft.name, updated: Date.now(), pages: proj.pages.length, fmt: proj.pages[0].format,
+    proj: ser(proj), media: usedMedia(proj), thumb: draftThumb()});
+}
+function cleanLoaded(p){
+  p.pages.forEach(d => {
+    d.layers = d.layers.filter(l => !(l.src && l.src.startsWith("media:") && !media[l.src.slice(6)]));
+    if(d.bg.src && d.bg.src.startsWith("media:") && !media[d.bg.src.slice(6)]) d.bg.kind = "color";
+  });
+  return p;
+}
+async function load(){
   try{
-    const m = JSON.parse(localStorage.getItem("lutece-studio-media") || "{}");
-    Object.assign(media, m);
-    let p = JSON.parse(localStorage.getItem("lutece-studio-proj") || "null");
-    if(!p){ const d = JSON.parse(localStorage.getItem("lutece-studio-doc") || "null"); if(d && d.layers) p = {pages:[d], cur:0}; }
-    if(p && p.pages && p.pages.length){
-      p.pages.forEach(d => {
-        d.layers = d.layers.filter(l => !(l.src && l.src.startsWith("media:") && !media[l.src.slice(6)]));
-        if(d.bg.src && d.bg.src.startsWith("media:") && !media[d.bg.src.slice(6)]) d.bg.kind = "color";
-      });
-      return p;
+    const cur = await IDB.get("current");
+    if(cur && cur.proj){
+      Object.assign(media, (await IDB.get("media")) || {});
+      curDraft = cur.draft || null;
+      return cleanLoaded(JSON.parse(cur.proj));
     }
   }catch(e){}
+  try{   // ancienne sauvegarde (localStorage)
+    Object.assign(media, JSON.parse(localStorage.getItem("lutece-studio-media") || "{}"));
+    mediaDirty = Object.keys(media).length > 0;
+    let p = JSON.parse(localStorage.getItem("lutece-studio-proj") || "null");
+    if(!p){ const d = JSON.parse(localStorage.getItem("lutece-studio-doc") || "null"); if(d && d.layers) p = {pages:[d], cur:0}; }
+    if(p && p.pages && p.pages.length) return cleanLoaded(p);
+  }catch(e){}
   return null;
+}
+
+/* --- Brouillons --- */
+const fmtDate = t => { const d = new Date(t); return d.toLocaleDateString("fr-FR", {day:"numeric", month:"short"}) + " · " + d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"}); };
+function defaultDraftName(){
+  const t = proj.pages.flatMap(pg => pg.layers).find(l => l.type === "text" && l.text.trim());
+  const base = t ? t.text.split("\n")[0].trim().slice(0, 28) : "Visuel";
+  const nice = base === base.toUpperCase() ? base.charAt(0) + base.slice(1).toLowerCase() : base;
+  return nice + " · " + new Date().toLocaleDateString("fr-FR", {day:"numeric", month:"short"});
+}
+function askName(title, value){
+  return new Promise(res => {
+    openModal(`<h2>${esc(title)}</h2><p>Le brouillon reste sur ce téléphone et se met à jour tout seul pendant que tu travailles.</p>
+      <div class="stack"><input class="txt" id="dName" value="${esc(value)}" maxlength="60">
+      <button class="big" data-r="ok">Enregistrer</button><button class="big ghost" data-r="x">Annuler</button></div>`);
+    const inp = $("#dName"); setTimeout(() => { inp.focus(); inp.select(); }, 60);
+    inp.onkeydown = e => { if(e.key === "Enter"){ closeModal(); res(inp.value.trim() || value); } };
+    $("#modalCard").onclick = e => { const b = e.target.closest("[data-r]"); if(!b) return; closeModal(); res(b.dataset.r === "ok" ? (inp.value.trim() || value) : null); };
+  });
+}
+async function saveAsDraft(name){
+  if(!name) name = await askName("Enregistrer en brouillon", defaultDraftName());
+  if(!name) return false;
+  curDraft = {id: "d" + Date.now().toString(36), name};
+  try{ await writeDraft(); }catch(e){ curDraft = null; toast("Enregistrement impossible sur cet appareil"); return false; }
+  save(); toast("Brouillon enregistré"); if(tab === "tpl") renderPanel();
+  return true;
+}
+async function renameDraft(){
+  if(!curDraft) return;
+  const n = await askName("Renommer le brouillon", curDraft.name); if(!n) return;
+  curDraft.name = n; await writeDraft().catch(() => {}); save(); renderPanel();
+}
+// Avant de quitter le visuel en cours : s'il a été modifié et n'est lié à aucun brouillon, on propose de l'enregistrer.
+function askKeepCurrent(){
+  if(curDraft || hist.length < 2) return Promise.resolve(true);
+  return new Promise(res => {
+    openModal(`<h2>Garder le visuel en cours ?</h2><p>Il n'est pas enregistré en brouillon.</p>
+      <div class="stack"><button class="big" data-r="save">Enregistrer en brouillon</button>
+      <button class="big danger" data-r="drop">Ne pas garder</button><button class="big ghost" data-r="x">Annuler</button></div>`);
+    $("#modalCard").onclick = async e => {
+      const b = e.target.closest("[data-r]"); if(!b) return; closeModal();
+      if(b.dataset.r === "save") res(await saveAsDraft(defaultDraftName()));
+      else res(b.dataset.r === "drop");
+    };
+  });
+}
+function freshState(){
+  sel = null; hist = [ser(proj)]; hpos = 0; updUndo();
+  renderFormats(); renderTabs(); renderPanel(); renderCtx(); renderPages(); layoutCanvas(); save();
+}
+async function newVisual(){
+  if(!(await askKeepCurrent())) return;
+  if(curDraft) await writeDraft().catch(() => {});
+  const d = newDoc(); d.format = doc.format; applyTemplateTo(d, 0);
+  setProj({pages:[d], cur:0}); curDraft = null; freshState(); toast("Nouveau visuel");
+}
+async function openDraft(id){
+  if(curDraft && curDraft.id === id){ toast("Ce brouillon est déjà ouvert"); return; }
+  if(!(await askKeepCurrent())) return;
+  if(curDraft) await writeDraft().catch(() => {});
+  const rec = await IDB.getDraft(id).catch(() => null);
+  if(!rec){ toast("Brouillon introuvable"); return; }
+  Object.assign(media, rec.media || {}); mediaDirty = true;
+  setProj(cleanLoaded(JSON.parse(rec.proj))); curDraft = {id: rec.id, name: rec.name};
+  freshState(); toast("« " + rec.name + " » ouvert");
+}
+async function deleteDraft(id){
+  const rec = await IDB.getDraft(id).catch(() => null); if(!rec) return;
+  if(!(await confirmBox("Supprimer ce brouillon ?", "« " + rec.name + " » sera supprimé de ce téléphone." + (curDraft && curDraft.id === id ? " Le visuel reste affiché, mais ne sera plus enregistré." : ""), "Supprimer"))) return;
+  await IDB.delDraft(id).catch(() => {});
+  if(curDraft && curDraft.id === id){ curDraft = null; save(); }
+  renderPanel();
+}
+async function fillDrafts(){
+  const box = $("#draftList"); if(!box) return;
+  let list = [];
+  try{ list = (await IDB.drafts()) || []; }catch(e){ box.innerHTML = '<p class="hint">Les brouillons ne sont pas disponibles dans ce navigateur.</p>'; return; }
+  list.sort((a, b) => b.updated - a.updated);
+  if(!$("#draftList")) return;
+  $("#draftList").innerHTML = list.length ? `<div class="drafts">${list.map(d => `
+    <div style="position:relative"><button class="draft ${curDraft && curDraft.id === d.id ? "on" : ""}" data-draft="${d.id}" style="width:100%">
+      <span class="th" style="background-image:url(${d.thumb});aspect-ratio:${(FORMATS[d.fmt] || FORMATS["9x16"]).w}/${(FORMATS[d.fmt] || FORMATS["9x16"]).h}"></span>
+      <span class="meta"><b>${esc(d.name)}</b><i>${fmtDate(d.updated)}${d.pages > 1 ? " · " + d.pages + " pages" : ""}</i></span></button>
+      <button class="delbtn" data-deldraft="${d.id}" title="Supprimer ce brouillon">${ICONS.trash}</button></div>`).join("")}</div>`
+    : '<p class="hint">Aucun brouillon pour l\'instant. Enregistre le visuel en cours pour le retrouver plus tard.</p>';
 }
 
 /* ============================================================
@@ -1048,7 +1206,13 @@ function renderPanel(){
   const P = $("#panel"), l = selLayer();
   let h = "";
   if(tab === "tpl"){
-    h = `<h3>Partir d'un modèle</h3><div class="tpl">${TEMPLATES.map((t, i) => `<button data-tpl="${i}"><canvas data-tplc="${i}" width="180" height="320"></canvas><span>${t.name}</span></button>`).join("")}</div>
+    h = `<h3>Mes brouillons</h3>
+      ${curDraft ? `<div class="dstatus"><span>Brouillon <b>${esc(curDraft.name)}</b><br><small style="color:var(--muted)">Enregistré automatiquement</small></span><button class="pill" data-act="renameDraft">Renommer</button></div>`
+        : `<button class="big" data-act="saveDraft">${ICONS.dup} Enregistrer en brouillon</button><div style="height:8px"></div>`}
+      <button class="big ghost" data-act="newVisual">${ICONS.plus} Nouveau visuel</button>
+      <div id="draftList"></div>
+      <div class="sep"></div>
+      <h3>Partir d'un modèle</h3><div class="tpl">${TEMPLATES.map((t, i) => `<button data-tpl="${i}"><canvas data-tplc="${i}" width="180" height="320"></canvas><span>${t.name}</span></button>`).join("")}</div>
       <p class="hint">Un modèle remplace les calques actuels (tu peux annuler). Glisse pour déplacer, pince pour zoomer/tourner, touche un calque pour le modifier.</p>`;
   }
   else if(tab === "bg"){
@@ -1163,7 +1327,7 @@ function renderPanel(){
     }).join("") || '<div class="empty">Aucun calque. Ajoute un texte, un score, une photo ou un élément.</div>');
   }
   P.innerHTML = h;
-  if(tab === "tpl") drawTplPreviews();
+  if(tab === "tpl"){ drawTplPreviews(); fillDrafts(); }
 }
 
 /* --- Événements des panneaux --- */
@@ -1250,10 +1414,12 @@ P.addEventListener("click", async e => {
     if(await confirmBox("Supprimer ce match ?", `${m.a || "?"} ${m.sa || ""}-${m.sb || ""} ${m.b || "?"}`, "Supprimer")){ l.matches.splice(+t.dataset.delm, 1); commit(); renderPanel(); requestRender(); }
     return;
   }
+  if(t.dataset.deldraft){ deleteDraft(t.dataset.deldraft); return; }
+  if(t.dataset.draft){ openDraft(t.dataset.draft); return; }
   if(t.dataset.delmedia){
     const id = t.dataset.delmedia, used = proj.pages.some(pg => pg.layers.some(x => x.src === "media:" + id) || pg.bg.src === "media:" + id);
     if(await confirmBox("Supprimer cette photo ?", used ? "Elle est utilisée sur le visuel : elle en sera retirée aussi." : "Elle sera retirée de « Mes photos ».", "Supprimer")){
-      delete media[id];
+      delete media[id]; mediaDirty = true;
       proj.pages.forEach(pg => { pg.layers = pg.layers.filter(x => x.src !== "media:" + id); if(pg.bg.src === "media:" + id) pg.bg.kind = "color"; });
       if(sel && !getLayer(sel)) sel = null;
       commit(); renderPanel(); renderCtx(); requestRender();
@@ -1272,10 +1438,14 @@ P.addEventListener("click", async e => {
   if(a === "addScoreMin") addLayer(scoreLayer({style:"minimal", scale:.95}));
   if(a === "addMatch" && l){ l.matches.push({a:"Lutèce", b:"", sa:"", sb:""}); commit(); renderPanel(); requestRender(); }
   if(a === "delSel" && l){ askDelete(l.id); return; }
+  if(a === "saveDraft"){ saveAsDraft(); return; }
+  if(a === "renameDraft"){ renameDraft(); return; }
+  if(a === "newVisual"){ newVisual(); return; }
   if(a === "flip" && l){ l.flip = !l.flip; commit(); requestRender(); }
   if(a === "clearMedia"){
     if(await confirmBox("Vider mes photos ?", "Les photos importées et leurs calques seront retirés.", "Vider")){
       for(const k in media) delete media[k];
+      mediaDirty = true;
       proj.pages.forEach(pg => { pg.layers = pg.layers.filter(x => !(x.src || "").startsWith("media:")); if((pg.bg.src || "").startsWith("media:")) Object.assign(pg.bg, {kind:"color"}); });
       sel = null; commit(); renderPanel(); renderCtx(); requestRender();
     }
@@ -1337,7 +1507,7 @@ async function importFiles(files, pickMode){
     try{
       const data = await readFileAsImage(file);
       const id = "m" + Date.now().toString(36) + (n++);
-      media[id] = data;
+      media[id] = data; mediaDirty = true;
       if(pickMode === "bg"){
         Object.assign(doc.bg, {kind:"media", src:"media:" + id, zoom:1, ox:0, oy:0});
         commit();
@@ -1470,14 +1640,14 @@ $("#pMenu").addEventListener("click", () => {
       <div class="row" style="margin:0"><button class="big ghost" data-pm="left" ${i === 0 ? "disabled style='opacity:.4'" : ""}>← Avancer</button><button class="big ghost" data-pm="right" ${i === n - 1 ? "disabled style='opacity:.4'" : ""}>Reculer →</button></div>
       <button class="big ghost" data-pm="dup">${ICONS.dup} Dupliquer la page</button>
       <button class="big danger" data-pm="del" ${n < 2 ? "disabled style='opacity:.4'" : ""}>${ICONS.trash} Supprimer la page</button>
-      <button class="big ghost" data-pm="reset">Tout recommencer</button>
+      <button class="big ghost" data-pm="reset">Nouveau visuel</button>
       <button class="big ghost" data-pm="x">Fermer</button>
     </div>`);
   $("#modalCard").onclick = e => {
     const b = e.target.closest("[data-pm]"); if(!b || b.disabled) return;
     const a = b.dataset.pm; closeModal();
     if(a === "left") movePage(-1); if(a === "right") movePage(1);
-    if(a === "dup") addPage(true); if(a === "del") deletePage(); if(a === "reset") newProject();
+    if(a === "dup") addPage(true); if(a === "del") deletePage(); if(a === "reset") newVisual();
   };
 });
 
@@ -1588,7 +1758,7 @@ $("#exportBtn").addEventListener("click", () => {
 let modalAt = 0;
 function openModal(html){ $("#modalCard").innerHTML = html; $("#modal").classList.add("show"); modalAt = performance.now(); }
 // Ignore le « clic fantôme » envoyé par les mobiles juste après un toucher qui a ouvert la fenêtre
-$("#modal").addEventListener("click", e => { if(performance.now() - modalAt < 450){ e.stopPropagation(); e.preventDefault(); } }, true);
+$("#modal").addEventListener("click", e => { if(performance.now() - modalAt < 350){ e.stopPropagation(); e.preventDefault(); } }, true);
 function closeModal(){ $("#modal").classList.remove("show"); $("#modalCard").onclick = null; }
 $("#modal").addEventListener("click", e => { if(e.target.id === "modal") closeModal(); });
 function confirmBox(title, text, ok){
@@ -1613,7 +1783,7 @@ async function init(){
     if(r.ok) LIB = await r.json();
   }catch(e){}
   PAL = LIB.palette && LIB.palette.length ? LIB.palette : FALLBACK_MANIFEST.palette;
-  const saved = load();
+  const saved = await load();
   if(saved){
     saved.pages.forEach(d => {
       if(d.bg.kind === "asset" && !LIB.backgrounds.some(b => b.src === d.bg.src)) d.bg.src = LIB.backgrounds[0]?.src || null;
