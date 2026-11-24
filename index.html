@@ -1080,9 +1080,9 @@ function defaultDraftName(){
   const nice = base === base.toUpperCase() ? base.charAt(0) + base.slice(1).toLowerCase() : base;
   return nice + " · " + new Date().toLocaleDateString("fr-FR", {day:"numeric", month:"short"});
 }
-function askName(title, value){
+function askName(title, value, hint){
   return new Promise(res => {
-    openModal(`<h2>${esc(title)}</h2><p>Le brouillon reste sur ce téléphone et se met à jour tout seul pendant que tu travailles.</p>
+    openModal(`<h2>${esc(title)}</h2><p>${hint || "Le brouillon reste sur ce téléphone et se met à jour tout seul pendant que tu travailles."}</p>
       <div class="stack"><input class="txt" id="dName" value="${esc(value)}" maxlength="60">
       <button class="big" data-r="ok">Enregistrer</button><button class="big ghost" data-r="x">Annuler</button></div>`);
     const inp = $("#dName"); setTimeout(() => { inp.focus(); inp.select(); }, 60);
@@ -1090,6 +1090,56 @@ function askName(title, value){
     $("#modalCard").onclick = e => { const b = e.target.closest("[data-r]"); if(!b) return; closeModal(); res(b.dataset.r === "ok" ? (inp.value.trim() || value) : null); };
   });
 }
+/* --- Mes modèles : une page enregistrée pour repartir d'elle --- */
+async function getUserTpls(){ try{ return (await IDB.get("templates")) || []; }catch(e){ return null; } }
+async function setUserTpls(list){ await IDB.set("templates", list); }
+async function savePageAsTemplate(){
+  const t = doc.layers.find(l => l.type === "text" && l.text.trim());
+  const base = t ? t.text.split("\n")[0].trim().slice(0, 28) : "Mon modèle";
+  const name = await askName("Enregistrer comme modèle", base === base.toUpperCase() ? base.charAt(0) + base.slice(1).toLowerCase() : base,
+    "La page (fond, calques, logo) devient un modèle réutilisable, ici dans « Mes modèles ». Il reste sur cet appareil.");
+  if(!name) return;
+  const page = JSON.parse(ser(doc)), f = FORMATS[page.format], c = document.createElement("canvas");
+  c.width = 216; c.height = Math.round(216 * f.h / f.w);
+  const x = c.getContext("2d"), k = c.width / f.w; x.setTransform(k, 0, 0, k, 0, 0); renderDoc(x, f.w, f.h, doc, doc.format);
+  const rec = {id:"t" + Date.now().toString(36), name, created: Date.now(), fmt: page.format, page: ser(page),
+    media: usedMedia({pages:[page]}), thumb: c.toDataURL("image/jpeg", .75)};
+  const list = await getUserTpls();
+  if(!list){ toast("Enregistrement impossible sur cet appareil"); return; }
+  list.unshift(rec);
+  try{ await setUserTpls(list); }catch(e){ toast("Enregistrement impossible (mémoire pleine ?)"); return; }
+  toast("Modèle « " + name + " » enregistré");
+  if(tab !== "tpl"){ tab = "tpl"; panelOpen = true; renderTabs(); }
+  renderPanel();
+}
+async function applyUserTemplate(id){
+  const list = await getUserTpls() || [], rec = list.find(r => r.id === id); if(!rec) return;
+  if(doc.layers.length && !(await confirmBox("Remplacer la page ?", "Les calques de la page seront remplacés par le modèle « " + rec.name + " ». Tu pourras annuler.", "Remplacer"))) return;
+  Object.assign(media, rec.media || {}); if(Object.keys(rec.media || {}).length) mediaDirty = true;
+  const pg = JSON.parse(rec.page);
+  pg.layers.forEach(l => l.id = nid());
+  doc.bg = pg.bg; doc.layers = pg.layers; doc.logo = pg.logo || {show:true, color:"#FFFFFF"};
+  cleanLoaded({pages:[doc]}); sel = null; multi.clear();
+  commit(); renderCtx(); renderPanel(); requestRender(); toast("Modèle appliqué");
+}
+async function deleteUserTemplate(id){
+  const list = await getUserTpls() || [], rec = list.find(r => r.id === id); if(!rec) return;
+  if(!(await confirmBox("Supprimer ce modèle ?", "« " + rec.name + " » sera supprimé de cet appareil.", "Supprimer"))) return;
+  await setUserTpls(list.filter(r => r.id !== id)).catch(() => {}); renderPanel();
+}
+async function fillUserTpls(){
+  const box = $("#userTpls"); if(!box) return;
+  const list = await getUserTpls();
+  if(!$("#userTpls")) return;
+  if(list === null){ $("#userTpls").innerHTML = '<p class="hint">Les modèles perso ne sont pas disponibles dans ce navigateur.</p>'; return; }
+  $("#userTpls").innerHTML = list.length ? `<div class="drafts">${list.map(r => `
+    <div style="position:relative"><button class="draft" data-utpl="${r.id}" style="width:100%">
+      <span class="th" style="background-image:url(${r.thumb});aspect-ratio:${(FORMATS[r.fmt] || FORMATS["9x16"]).w}/${(FORMATS[r.fmt] || FORMATS["9x16"]).h}"></span>
+      <span class="meta"><b>${esc(r.name)}</b><i>Mon modèle</i></span></button>
+      <button class="delbtn" data-delutpl="${r.id}" title="Supprimer ce modèle">${ICONS.trash}</button></div>`).join("")}</div>`
+    : '<p class="hint">Aucun modèle perso. Mets en page un visuel puis enregistre-le comme modèle pour le réutiliser.</p>';
+}
+
 async function saveAsDraft(name){
   if(!name) name = await askName("Enregistrer en brouillon", defaultDraftName());
   if(!name) return false;
@@ -1383,7 +1433,11 @@ function renderPanel(){
       <button class="big ghost" data-act="newVisual">${ICONS.plus} Nouveau visuel</button>
       <div id="draftList"></div>
       <div class="sep"></div>
-      <h3>Partir d'un modèle</h3><div class="tpl">${TEMPLATES.map((t, i) => `<button data-tpl="${i}"><canvas data-tplc="${i}" width="180" height="320"></canvas><span>${t.name}</span></button>`).join("")}</div>
+      <h3>Mes modèles</h3>
+      <button class="big ghost" data-act="saveTpl">${ICONS.tpl} Enregistrer cette page comme modèle</button>
+      <div id="userTpls"></div>
+      <div class="sep"></div>
+      <h3>Modèles Lutèce</h3><div class="tpl">${TEMPLATES.map((t, i) => `<button data-tpl="${i}"><canvas data-tplc="${i}" width="180" height="320"></canvas><span>${t.name}</span></button>`).join("")}</div>
       <p class="hint">Un modèle remplace les calques actuels (tu peux annuler). Glisse pour déplacer, pince pour zoomer/tourner, touche un calque pour le modifier.</p>`;
   }
   else if(tab === "bg"){
@@ -1525,7 +1579,7 @@ function renderPanel(){
     }).join("") || '<div class="empty">Aucun calque. Ajoute un texte, un score, une photo ou un élément.</div>');
   }
   P.innerHTML = h;
-  if(tab === "tpl"){ drawTplPreviews(); fillDrafts(); }
+  if(tab === "tpl"){ drawTplPreviews(); fillDrafts(); fillUserTpls(); }
 }
 
 /* --- Événements des panneaux --- */
@@ -1628,6 +1682,8 @@ P.addEventListener("click", async e => {
     return;
   }
   if(t.dataset.deldraft){ deleteDraft(t.dataset.deldraft); return; }
+  if(t.dataset.delutpl){ deleteUserTemplate(t.dataset.delutpl); return; }
+  if(t.dataset.utpl){ applyUserTemplate(t.dataset.utpl); return; }
   if(t.dataset.draft){ openDraft(t.dataset.draft); return; }
   if(t.dataset.delmedia){
     const id = t.dataset.delmedia, used = proj.pages.some(pg => pg.layers.some(x => x.src === "media:" + id) || pg.bg.src === "media:" + id);
@@ -1653,6 +1709,7 @@ P.addEventListener("click", async e => {
   if(a === "delSel" && l){ isMulti() ? askDeleteMany() : askDelete(l.id); return; }
   if(a === "selAllText"){ setPanel(true); selectMany(doc.layers.filter(x => x.type === "text" && !x.hidden && !x.locked).map(x => x.id)); if(!isMulti()) toast("Il faut au moins 2 textes sur la page"); return; }
   if(a === "saveDraft"){ saveAsDraft(); return; }
+  if(a === "saveTpl"){ savePageAsTemplate(); return; }
   if(a === "logoToggle"){ doc.logo = doc.logo || {color:"#FFFFFF"}; doc.logo.show = doc.logo.show === false; commit(); renderPanel(); requestRender(); return; }
   if(a === "renameDraft"){ renameDraft(); return; }
   if(a === "newVisual"){ newVisual(); return; }
@@ -1854,6 +1911,7 @@ $("#pMenu").addEventListener("click", () => {
     <div class="stack">
       <div class="row" style="margin:0"><button class="big ghost" data-pm="left" ${i === 0 ? "disabled style='opacity:.4'" : ""}>← Avancer</button><button class="big ghost" data-pm="right" ${i === n - 1 ? "disabled style='opacity:.4'" : ""}>Reculer →</button></div>
       <button class="big ghost" data-pm="dup">${ICONS.dup} Dupliquer la page</button>
+      <button class="big ghost" data-pm="tpl">${ICONS.tpl} Enregistrer comme modèle</button>
       <button class="big danger" data-pm="del" ${n < 2 ? "disabled style='opacity:.4'" : ""}>${ICONS.trash} Supprimer la page</button>
       <button class="big ghost" data-pm="reset">Nouveau visuel</button>
       <button class="big ghost" data-pm="x">Fermer</button>
@@ -1863,6 +1921,7 @@ $("#pMenu").addEventListener("click", () => {
     const a = b.dataset.pm; closeModal();
     if(a === "left") movePage(-1); if(a === "right") movePage(1);
     if(a === "dup") addPage(true); if(a === "del") deletePage(); if(a === "reset") newVisual();
+    if(a === "tpl") savePageAsTemplate();
   };
 });
 
