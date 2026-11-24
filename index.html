@@ -731,6 +731,17 @@ function render(){
   cx.strokeStyle = "#ff3fb4"; cx.lineWidth = 2*px;
   if(guides.x){ cx.beginPath(); cx.moveTo(f.w/2, 0); cx.lineTo(f.w/2, f.h); cx.stroke(); }
   if(guides.y){ cx.beginPath(); cx.moveTo(0, f.h/2); cx.lineTo(f.w, f.h/2); cx.stroke(); }
+  // sélection multiple : un cadre par calque, sans poignées
+  if(isMulti()){
+    for(const x of selLayers()){
+      if(x.hidden || !x._w) continue;
+      const T = tf(x), w = x._w * T.scale, h = x._h * T.scale, m = 8 * px;
+      cx.save(); cx.translate(T.x * f.w, T.y * f.h); cx.rotate(T.rot || 0);
+      cx.strokeStyle = "#FFC83D"; cx.lineWidth = 2.5*px; cx.setLineDash([8*px, 6*px]);
+      cx.strokeRect(-w/2 - m, -h/2 - m, w + m*2, h + m*2); cx.setLineDash([]); cx.restore();
+    }
+    return;
+  }
   // sélection
   const l = selLayer();
   if(l && !l.hidden && l._w){
@@ -812,7 +823,7 @@ cv.addEventListener("pointerdown", e => {
   if(ptrs.size === 1){
     const l = selLayer();
     const docPerCss = f.w / view.cssW;
-    if(l && !l.locked && l._w){
+    if(l && !isMulti() && !l.locked && l._w){
       const dp = delPos(l);
       if(Math.hypot(p.x - dp.x, p.y - dp.y) < 26 * docPerCss){ ptrs.delete(e.pointerId); g = null; askDelete(l.id); return; }
       const h = handlePos(l);
@@ -824,17 +835,19 @@ cv.addEventListener("pointerdown", e => {
     }
     const hit = hitLayer(p);
     if(hit){
+      if(e.shiftKey || e.ctrlKey || e.metaKey || multiMode){ toggleSel(hit.id); g = {mode:"none", moved:false}; return; }
+      if(isMulti() && multi.has(hit.id)){ g = {mode:"gmove", l:hit, items:null, p0:p, moved:false, t:Date.now()}; return; }
       if(sel !== hit.id){ select(hit.id, true); }
       if(hit.locked){ g = {mode:"tap", l:hit, moved:false}; return; }
       const T = tf(hit);
       g = {mode:"move", l:hit, T:null, ox: p.x - T.x * f.w, oy: p.y - T.y * f.h, moved:false, t:Date.now()};
     } else {
-      if(sel){ select(null); }
+      if(sel && !multiMode){ select(null); }
       g = {mode:"empty", moved:false};
     }
   } else if(ptrs.size === 2){
     const l = selLayer();
-    if(!l || l.locked){ g = null; return; }
+    if(!l || l.locked || isMulti()){ g = null; return; }
     const [a, b] = [...ptrs.values()], T = editT(l);
     g = {mode:"pinch", l, T, d0: Math.hypot(b.x - a.x, b.y - a.y), a0: Math.atan2(b.y - a.y, b.x - a.x),
          c0: {x:(a.x + b.x)/2, y:(a.y + b.y)/2}, s0: T.scale, r0: T.rot || 0, x0: T.x, y0: T.y, moved:false};
@@ -843,7 +856,13 @@ cv.addEventListener("pointerdown", e => {
 cv.addEventListener("pointermove", e => {
   if(!ptrs.has(e.pointerId)) return;
   const p = toDoc(e); ptrs.set(e.pointerId, p);
-  if(!g || g.mode === "empty" || g.mode === "tap") return;
+  if(!g || g.mode === "empty" || g.mode === "tap" || g.mode === "none") return;
+  if(g.mode === "gmove"){
+    const f = F();
+    if(!g.items) g.items = selLayers().filter(x => !x.locked).map(x => { const T = editT(x); return {T, x0:T.x, y0:T.y}; });
+    g.items.forEach(it => { it.T.x = it.x0 + (p.x - g.p0.x) / f.w; it.T.y = it.y0 + (p.y - g.p0.y) / f.h; });
+    g.moved = true; requestRender(); return;
+  }
   const f = F();
   if(!g.T) g.T = editT(g.l);
   const l = g.T;
@@ -876,6 +895,7 @@ function endPtr(e){
   if(g && ptrs.size === 0){
     if(g.moved || g.mode === "empty") setPanel(false);                    // on manipule : le panneau se replie, le visuel s'agrandit
     else if((g.mode === "move" || g.mode === "tap") && g.l) openEditor(g.l); // simple toucher sur un calque : on rouvre son panneau
+    else if(g.mode === "gmove" && g.l && !multiMode){ select(g.l.id, true); openEditor(g.l); } // toucher un calque de la sélection : on ne garde que lui
   }
   if(ptrs.size === 0){ g = null; guides = {x:false, y:false}; requestRender(); }
   else if(ptrs.size === 1 && g && g.mode === "pinch"){
@@ -897,29 +917,39 @@ let wheelT;
 /* --- Copier / coller des calques (entre pages et brouillons) --- */
 let clip = null;
 function copyLayer(l, cut){
-  clip = ser(l); renderClipBtn(); renderCtx();
-  if(cut){ removeLayer(l.id); toast("Calque coupé"); } else toast("Calque copié — change de page et colle");
+  const list = isMulti() ? selLayers() : [l], n = list.length;
+  clip = ser(list); renderClipBtn(); renderCtx();
+  if(cut){
+    const ids = list.map(x => x.id); doc.layers = doc.layers.filter(x => !ids.includes(x.id)); sel = null; multi.clear();
+    commit(); renderPanel(); renderCtx(); requestRender(); toast(n > 1 ? n + " calques coupés" : "Calque coupé");
+  } else toast((n > 1 ? n + " calques copiés" : "Calque copié") + " — change de page et colle");
 }
 function pasteLayer(){
   if(!clip) return;
-  const c = JSON.parse(clip); c.id = nid(); c.locked = false;
-  if(doc.layers.some(x => x.x === c.x && x.y === c.y && x.type === c.type)) [c, ...Object.values(c.fx || {})].forEach(t => { t.x += .03; t.y += .02; });
-  doc.layers.push(c); sel = c.id;
-  commit(); renderPanel(); renderCtx(); requestRender(); toast("Calque collé");
+  let list = JSON.parse(clip); if(!Array.isArray(list)) list = [list];
+  const clash = list.some(c => doc.layers.some(x => x.x === c.x && x.y === c.y && x.type === c.type));
+  const ids = list.map(c => {
+    c.id = nid(); c.locked = false;
+    if(clash) [c, ...Object.values(c.fx || {})].forEach(t => { t.x += .03; t.y += .02; });
+    doc.layers.push(c); return c.id;
+  });
+  commit(); selectMany(ids); toast(ids.length > 1 ? ids.length + " calques collés" : "Calque collé");
 }
 function renderClipBtn(){ $("#pasteBtn").style.display = clip ? "" : "none"; }
 document.addEventListener("keydown", e => {
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
   const l = selLayer();
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a"){ e.preventDefault(); selectMany(doc.layers.filter(x => !x.hidden && !x.locked).map(x => x.id)); return; }
+  if(e.key === "Escape" && (sel || multiMode)){ multiMode = false; select(null); return; }
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && l){ e.preventDefault(); copyLayer(l); return; }
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "x" && l){ e.preventDefault(); copyLayer(l, true); return; }
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v" && clip){ e.preventDefault(); pasteLayer(); return; }
   if(!l) return;
-  if(e.key === "Delete" || e.key === "Backspace"){ askDelete(l.id); }
+  if(e.key === "Delete" || e.key === "Backspace"){ isMulti() ? askDeleteMany() : askDelete(l.id); }
   const st = e.shiftKey ? 10 : 1, f = F();
   const mv = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[e.key];
-  if(mv && !l.locked){ e.preventDefault(); const T = editT(l); T.x += mv[0]*st/f.w; T.y += mv[1]*st/f.h; requestRender(); clearTimeout(wheelT); wheelT = setTimeout(commit, 300); }
+  if(mv && !l.locked){ e.preventDefault(); selLayers().filter(x => !x.locked).forEach(x => { const T = editT(x); T.x += mv[0]*st/f.w; T.y += mv[1]*st/f.h; }); requestRender(); clearTimeout(wheelT); wheelT = setTimeout(commit, 300); }
 });
 
 /* ============================================================
@@ -941,6 +971,7 @@ function setProj(p){ proj = p; proj.cur = Math.max(0, Math.min(proj.cur || 0, pr
 function afterRestore(){
   renderPages();
   if(sel && !getLayer(sel)) sel = null;
+  multi = new Set([...multi].filter(id => getLayer(id))); if(multi.size <= 1) multi.clear();
   updUndo(); renderFormats(); layoutCanvas(); renderPanel(); renderCtx(); save();
 }
 function updUndo(){
@@ -1168,7 +1199,35 @@ function moveLayer(id, dir){
   [doc.layers[i], doc.layers[j]] = [doc.layers[j], doc.layers[i]];
   commit(); renderPanel(); requestRender();
 }
+/* --- Sélection multiple --- */
+let multi = new Set(), multiMode = false;
+const isMulti = () => sel !== null && multi.size > 1;
+const selIds = () => isMulti() ? [...multi].filter(id => getLayer(id)) : (sel ? [sel] : []);
+const selLayers = () => selIds().map(getLayer).filter(Boolean);
+const targets = l => isMulti() ? selLayers().filter(x => x.type === l.type) : [l];   // calques modifiés par un réglage
+function toggleSel(id){
+  if(!isMulti()) multi = new Set(sel ? [sel] : []);
+  if(multi.has(id)){ multi.delete(id); if(sel === id) sel = [...multi].pop() || null; }
+  else { multi.add(id); sel = id; }
+  if(multi.size <= 1) multi.clear();
+  const l = selLayer();
+  if(l && tab !== "layers"){ tab = l.type === "text" ? "text" : l.type === "score" ? "score" : (l.kind === "photo" ? "photo" : "el"); renderTabs(); }
+  renderPanel(); renderCtx(); requestRender();
+}
+function selectMany(ids){
+  ids = ids.filter(id => getLayer(id));
+  if(ids.length < 2){ select(ids[0] || null); return; }
+  multi = new Set(ids); sel = ids[ids.length - 1];
+  renderPanel(); renderCtx(); requestRender();
+}
+async function askDeleteMany(){
+  const ids = selIds(); if(ids.length < 2){ if(ids[0]) askDelete(ids[0]); return; }
+  if(!(await confirmBox("Supprimer " + ids.length + " calques ?", "Les calques sélectionnés seront supprimés. Tu pourras annuler.", "Supprimer"))) return;
+  doc.layers = doc.layers.filter(l => !ids.includes(l.id)); sel = null; multi.clear();
+  commit(); renderPanel(); renderCtx(); requestRender();
+}
 function select(id, fromCanvas){
+  multi.clear();
   sel = id;
   const l = selLayer();
   if(l && fromCanvas){
@@ -1220,7 +1279,19 @@ function renderCtx(){
   const l = selLayer(), el = $("#ctx");
   el.classList.toggle("show", !!l);
   if(!l){ el.innerHTML = ""; requestAnimationFrame(layoutCanvas); return; }
+  if(isMulti() || multiMode){
+    const n = selIds().length;
+    el.innerHTML = `
+      <button data-c="multi" style="background:var(--accent);color:var(--accent-ink)">${multiMode ? "✓ Terminer" : "Sélection multiple"}</button>
+      <button disabled style="opacity:1;background:none">${n} sélectionné${n > 1 ? "s" : ""}</button>
+      ${n > 1 ? `<button data-c="copy">${ICONS.dup}Copier</button>
+      <button data-c="center">${ICONS.center}Centrer</button>
+      <button data-c="del" class="danger">${ICONS.trash}Supprimer</button>
+      <button data-c="none">Désélectionner</button>` : `<span style="align-self:center;color:var(--muted);font-size:12.5px;white-space:nowrap">Touche d'autres calques pour les ajouter</span>`}`;
+    requestAnimationFrame(layoutCanvas); return;
+  }
   el.innerHTML = `
+    <button data-c="multi">${ICONS.layers}Sélection multiple</button>
     <button data-c="edit">${ICONS.edit}Modifier</button>
     <button data-c="dup">${ICONS.dup}Dupliquer</button>
     <button data-c="copy">${ICONS.dup}Copier</button>
@@ -1235,6 +1306,17 @@ function renderCtx(){
 $("#ctx").addEventListener("click", e => {
   const b = e.target.closest("button"), l = selLayer(); if(!b || !l) return;
   const c = b.dataset.c;
+  if(c === "multi"){ multiMode = !multiMode; if(multiMode){ setPanel(false); toast("Touche les calques à ajouter à la sélection"); } renderCtx(); return; }
+  if(c === "none"){ multiMode = false; select(null); return; }
+  if(isMulti()){
+    if(c === "copy") copyLayer(l);
+    if(c === "del") askDeleteMany();
+    if(c === "center"){   // centre le groupe horizontalement en gardant les écarts
+      const ls = selLayers(), ts = ls.map(x => editT(x)), mid = ts.reduce((a, t) => a + t.x, 0) / ts.length;
+      ts.forEach(t => t.x += .5 - mid); commit(); requestRender();
+    }
+    return;
+  }
   if(c === "edit") openEditor(l, true);
   if(c === "dup") dupLayer(l.id);
   if(c === "copy") copyLayer(l);
@@ -1266,6 +1348,7 @@ function slider(key, label, min, max, step, val){
 }
 // Échelle et rotation chiffrées du calque (pour le format affiché)
 function tfFields(l){
+  if(isMulti()) return "";
   const T = tf(l);
   return `<div class="tfrow">
     <div class="row"><label>Échelle</label><input class="num" type="number" inputmode="decimal" data-tf="scale" value="${Math.round(T.scale * 100)}" step="1"><span class="unit">%</span></div>
@@ -1345,7 +1428,11 @@ function renderPanel(){
   }
   else if(tab === "text"){
     if(l && l.type === "text"){
-      h = `<h3>Texte sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3>${tfFields(l)}<div class="stack"><textarea data-k="text" rows="2">${esc(l.text)}</textarea></div>
+      const nT = targets(l).length;
+      h = nT > 1
+        ? `<h3>${nT} textes sélectionnés <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3><p class="hint" style="margin:0 0 6px">Police, taille, couleur, style… s'appliquent à tous. Touche un texte seul pour modifier son contenu.</p>`
+        : `<h3>Texte sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3>${tfFields(l)}<div class="stack"><textarea data-k="text" rows="2">${esc(l.text)}</textarea></div>`;
+      h += `
         <div style="height:10px"></div>
         <div class="fonts" data-pills="font">${FONTS.map(f => `<button class="pill ${l.font === f.fam ? "on" : ""}" data-v="${f.fam}" style="font-family:'${f.fam}';font-weight:${f.w}">${f.label}</button>`).join("")}</div>
         <div style="height:10px"></div>
@@ -1360,13 +1447,15 @@ function renderPanel(){
         ${slider("spacing", "Espacement", -5, 40, 1, l.spacing)}
         ${slider("lh", "Interligne", 0.75, 1.6, 0.01, l.lh)}
         ${slider("opacity", "Opacité", 0.05, 1, 0.01, l.opacity)}
-        <div class="sep"></div><button class="big ghost" data-act="addText">${ICONS.plus} Nouveau texte</button>`;
+        <div class="sep"></div><button class="big ghost" data-act="addText">${ICONS.plus} Nouveau texte</button>
+        ${nT > 1 ? "" : `<div style="height:8px"></div><button class="big ghost" data-act="selAllText">${ICONS.layers} Sélectionner tous les textes</button>`}`;
     } else {
       h = `<h3>Ajouter un texte</h3><div class="stack">
         <button class="big" data-act="addTitle" style="font-family:'Sofia Pro Comp';font-weight:900;font-size:22px">GROS TITRE</button>
         <button class="big ghost" data-act="addSub" style="font-family:'Barlow Condensed';font-style:italic;font-weight:800;font-size:19px">SOUS-TITRE</button>
         <button class="big ghost" data-act="addBody" style="font-weight:600">Texte courant</button>
-        <button class="big ghost" data-act="addTag" style="font-family:'Permanent Marker';font-weight:400">Annotation feutre</button></div>`;
+        <button class="big ghost" data-act="addTag" style="font-family:'Permanent Marker';font-weight:400">Annotation feutre</button></div>
+        <div class="sep"></div><button class="big ghost" data-act="selAllText">${ICONS.layers} Sélectionner tous les textes</button>`;
     }
   }
   else if(tab === "score"){
@@ -1425,7 +1514,7 @@ function renderPanel(){
         <button data-act="logoToggle" class="${lgOn ? "" : "off"}" title="${lgOn ? "Masquer" : "Afficher"}">${ICONS.eye}</button></div>` + (ls.map(x => {
       const ic = x.type === "image" ? `<img src="${esc(resolveSrc(x.src))}" alt="">` : ICONS[x.type === "text" ? "text" : "score"];
       const nm = x.type === "text" ? x.text.split("\n")[0] : x.type === "score" ? `Score · ${x.matches[0]?.a || ""} ${x.matches[0]?.sa || ""}-${x.matches[0]?.sb || ""}` : x.name;
-      return `<div class="layer ${sel === x.id ? "on" : ""}" data-lid="${x.id}">
+      return `<div class="layer ${selIds().includes(x.id) ? "on" : ""}" data-lid="${x.id}">
         <span class="grip" title="Glisser pour déplacer"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg></span>
         <div class="ic">${ic}</div><div class="nm">${esc(nm)}</div>
         <button data-la="vis" class="${x.hidden ? "off" : ""}" title="Afficher">${ICONS.eye}</button>
@@ -1451,7 +1540,7 @@ P.addEventListener("input", e => {
   if(t.dataset.k){
     const k = t.dataset.k;
     const v = t.type === "range" ? parseFloat(t.value) : t.value;
-    if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) l[k] = v;
+    if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) targets(l).forEach(x => x[k] = v);
     if(t.type === "range"){ const n = t.parentElement.querySelector(`[data-num="${k}"]`); if(n) n.value = n.dataset.pct ? Math.round(v * 100) : +v.toFixed(+t.step < 1 ? 2 : 0); }
     requestRender();
   } else if(t.dataset.num){
@@ -1461,7 +1550,7 @@ P.addEventListener("input", e => {
     const lo = parseFloat(r.min), hi = parseFloat(r.max);
     // le champ chiffré peut dépasser la réglette pour les tailles (pas pour les %)
     v = t.dataset.pct ? Math.max(lo, Math.min(hi, v)) : Math.max(k === "size" ? 4 : lo, v);
-    if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) l[k] = v;
+    if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) targets(l).forEach(x => x[k] = v);
     r.value = v; requestRender();
   } else if(t.dataset.tf && l){
     let v = parseFloat(String(t.value).replace(",", ".")); if(isNaN(v)) return;
@@ -1484,8 +1573,8 @@ function applyColor(key, val, done){
   if(key === "bgColor" && tab === "bg"){ doc.bg.kind = "color"; doc.bg.color = val; }
   else if(key === "veilColor"){ doc.bg.veilColor = val; }
   else if(key === "logoColor"){ doc.logo = doc.logo || {show:true}; doc.logo.color = val; }
-  else if(key === "tint" && l){ l.tint = val; l.tintOn = true; }
-  else if(l) setPath(l, key, val);
+  else if(key === "tint" && l){ targets(l).forEach(x => { x.tint = val; x.tintOn = true; }); }
+  else if(l) targets(l).forEach(x => setPath(x, key, val));
   requestRender();
   if(done){ commit(); renderPanel(); }
 }
@@ -1503,7 +1592,7 @@ P.addEventListener("click", async e => {
     else if(k === "logoShow"){ doc.logo = doc.logo || {color:"#FFFFFF"}; doc.logo.show = v; }
     else if(k === "bgAlign"){ doc.bg.align = doc.bg.align || {}; doc.bg.align[doc.format] = v; }
     else if(l){
-      l[k] = v;
+      targets(l).forEach(x => x[k] = v);
       if(k === "style" && l.type === "score"){
         if(v !== "hero" && l.matches.length < 2 && v === "list") l.matches.push({a:"Lutèce", b:"Adversaire", sa:"", sb:""});
       }
@@ -1523,7 +1612,7 @@ P.addEventListener("click", async e => {
   }
   if(t.dataset.media){ addLayer(imageLayer("media:" + t.dataset.media, {name:"Photo", kind:"photo", base:700})); return; }
   // calques
-  if(t.dataset.lid && !t.dataset.la){ select(t.dataset.lid); return; }
+  if(t.dataset.lid && !t.dataset.la){ (multiMode || e.shiftKey || e.ctrlKey || e.metaKey) ? toggleSel(t.dataset.lid) : select(t.dataset.lid); return; }
   if(t.dataset.la){
     const id = t.closest("[data-lid]").dataset.lid, x = getLayer(id);
     if(t.dataset.la === "vis"){ x.hidden = !x.hidden; commit(); }
@@ -1561,12 +1650,13 @@ P.addEventListener("click", async e => {
   if(a === "addScoreList") addLayer(scoreLayer({style:"list", label:"Résultats du tournoi", scale:.95, matches:[{a:"Lutèce", b:"Équipe A", sa:"13", sb:"9"},{a:"Lutèce", b:"Équipe B", sa:"11", sb:"13"},{a:"Lutèce", b:"Équipe C", sa:"15", sb:"7"}]}));
   if(a === "addScoreMin") addLayer(scoreLayer({style:"minimal", scale:.95}));
   if(a === "addMatch" && l){ l.matches.push({a:"Lutèce", b:"", sa:"", sb:""}); commit(); renderPanel(); requestRender(); }
-  if(a === "delSel" && l){ askDelete(l.id); return; }
+  if(a === "delSel" && l){ isMulti() ? askDeleteMany() : askDelete(l.id); return; }
+  if(a === "selAllText"){ setPanel(true); selectMany(doc.layers.filter(x => x.type === "text" && !x.hidden && !x.locked).map(x => x.id)); if(!isMulti()) toast("Il faut au moins 2 textes sur la page"); return; }
   if(a === "saveDraft"){ saveAsDraft(); return; }
   if(a === "logoToggle"){ doc.logo = doc.logo || {color:"#FFFFFF"}; doc.logo.show = doc.logo.show === false; commit(); renderPanel(); requestRender(); return; }
   if(a === "renameDraft"){ renameDraft(); return; }
   if(a === "newVisual"){ newVisual(); return; }
-  if(a === "flip" && l){ l.flip = !l.flip; commit(); requestRender(); }
+  if(a === "flip" && l){ targets(l).forEach(x => x.flip = !x.flip); commit(); requestRender(); }
   if(a === "clearMedia"){
     if(await confirmBox("Vider mes photos ?", "Les photos importées et leurs calques seront retirés.", "Vider")){
       for(const k in media) delete media[k];
