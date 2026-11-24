@@ -97,7 +97,14 @@ h3{margin:4px 0 10px;font-size:12px;letter-spacing:.08em;text-transform:uppercas
 .big svg{width:18px;height:18px}
 .row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
 .row>label{width:78px;flex:none;color:var(--muted);font-size:12px;font-weight:600}
-.row input[type=range]{flex:1}
+.row input[type=range]{flex:1;min-width:0}
+.num{width:64px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 6px;font-size:16px;text-align:right;outline:none;-moz-appearance:textfield}
+.num:focus{border-color:var(--accent)}
+.num::-webkit-inner-spin-button,.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.unit{width:16px;flex:none;color:var(--muted);font-size:12px;margin-left:-4px}
+.tfrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tfrow .row{margin:0;background:var(--panel2);border-radius:10px;padding:4px 8px}
+.tfrow .row>label{width:auto;flex:1}
 .stack{display:flex;flex-direction:column;gap:10px}
 .sep{height:1px;background:var(--line);margin:14px 0}
 input[type=range]{-webkit-appearance:none;appearance:none;height:28px;background:none}
@@ -191,7 +198,7 @@ textarea{resize:vertical;min-height:70px}
   </header>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div class="stage-tools"><button class="chip" id="safeBtn" title="Zones masquées par l'interface des stories">Zones UI</button></div>
+    <div class="stage-tools"><button class="chip" id="safeBtn" title="Zones masquées par l'interface des stories">Zones UI</button><button class="chip on" id="pasteBtn" style="display:none" title="Coller le calque copié (Ctrl+V)">Coller</button></div>
     <div id="pages"><div id="pthumbs"></div>
       <button class="pbtn" id="pAdd" title="Nouvelle page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="pbtn solid" id="pMenu" title="Options de la page"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></div>
@@ -865,7 +872,7 @@ cv.addEventListener("pointermove", e => {
 function endPtr(e){
   if(!ptrs.has(e.pointerId)) return;
   ptrs.delete(e.pointerId);
-  if(g && g.moved && ptrs.size === 0){ commit(); }
+  if(g && g.moved && ptrs.size === 0){ commit(); syncTfFields(); }
   if(g && ptrs.size === 0){
     if(g.moved || g.mode === "empty") setPanel(false);                    // on manipule : le panneau se replie, le visuel s'agrandit
     else if((g.mode === "move" || g.mode === "tap") && g.l) openEditor(g.l); // simple toucher sur un calque : on rouvre son panneau
@@ -884,13 +891,30 @@ cv.addEventListener("wheel", e => {
   const T = editT(l);
   if(e.shiftKey) T.rot = (T.rot || 0) + e.deltaY * 0.002;
   else T.scale = Math.max(0.05, T.scale * Math.exp(-e.deltaY * 0.0015));
-  requestRender(); clearTimeout(wheelT); wheelT = setTimeout(commit, 300);
+  requestRender(); clearTimeout(wheelT); wheelT = setTimeout(() => { commit(); syncTfFields(); }, 300);
 }, {passive:false});
 let wheelT;
+/* --- Copier / coller des calques (entre pages et brouillons) --- */
+let clip = null;
+function copyLayer(l, cut){
+  clip = ser(l); renderClipBtn(); renderCtx();
+  if(cut){ removeLayer(l.id); toast("Calque coupé"); } else toast("Calque copié — change de page et colle");
+}
+function pasteLayer(){
+  if(!clip) return;
+  const c = JSON.parse(clip); c.id = nid(); c.locked = false;
+  if(doc.layers.some(x => x.x === c.x && x.y === c.y && x.type === c.type)) [c, ...Object.values(c.fx || {})].forEach(t => { t.x += .03; t.y += .02; });
+  doc.layers.push(c); sel = c.id;
+  commit(); renderPanel(); renderCtx(); requestRender(); toast("Calque collé");
+}
+function renderClipBtn(){ $("#pasteBtn").style.display = clip ? "" : "none"; }
 document.addEventListener("keydown", e => {
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
   const l = selLayer();
   if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && l){ e.preventDefault(); copyLayer(l); return; }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "x" && l){ e.preventDefault(); copyLayer(l, true); return; }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v" && clip){ e.preventDefault(); pasteLayer(); return; }
   if(!l) return;
   if(e.key === "Delete" || e.key === "Backspace"){ askDelete(l.id); }
   const st = e.shiftKey ? 10 : 1, f = F();
@@ -1199,6 +1223,7 @@ function renderCtx(){
   el.innerHTML = `
     <button data-c="edit">${ICONS.edit}Modifier</button>
     <button data-c="dup">${ICONS.dup}Dupliquer</button>
+    <button data-c="copy">${ICONS.dup}Copier</button>
     <button data-c="front">${ICONS.up}Devant</button>
     <button data-c="back">${ICONS.down}Derrière</button>
     <button data-c="center">${ICONS.center}Centrer</button>
@@ -1212,6 +1237,7 @@ $("#ctx").addEventListener("click", e => {
   const c = b.dataset.c;
   if(c === "edit") openEditor(l, true);
   if(c === "dup") dupLayer(l.id);
+  if(c === "copy") copyLayer(l);
   if(c === "front") moveLayer(l.id, 1);
   if(c === "back") moveLayer(l.id, -1);
   if(c === "center"){ const T = editT(l); T.x = .5; T.y = .5; T.rot = 0; commit(); requestRender(); }
@@ -1231,8 +1257,25 @@ function swatches(key, val, extra = ""){
 function fontPills(key, val){
   return `<div class="fonts" data-pills="${key}">${FONTS.map(f => `<button class="pill ${val === f.fam ? "on" : ""}" data-v="${f.fam}" style="font-family:'${f.fam}';font-weight:${f.w}">${f.label}</button>`).join("")}</div>`;
 }
+// Réglette + champ chiffré synchronisés (les valeurs 0–1 s'affichent en %)
 function slider(key, label, min, max, step, val){
-  return `<div class="row"><label>${label}</label><input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
+  const pct = min >= 0 && max <= 1;
+  const nv = pct ? Math.round(val * 100) : +(+val).toFixed(step < 1 ? 2 : 0);
+  return `<div class="row"><label>${label}</label><input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${val}">
+    <input class="num" type="number" inputmode="decimal" data-num="${key}" data-pct="${pct ? 1 : ""}" value="${nv}" step="${pct ? 1 : step}">${pct ? '<span class="unit">%</span>' : ""}</div>`;
+}
+// Échelle et rotation chiffrées du calque (pour le format affiché)
+function tfFields(l){
+  const T = tf(l);
+  return `<div class="tfrow">
+    <div class="row"><label>Échelle</label><input class="num" type="number" inputmode="decimal" data-tf="scale" value="${Math.round(T.scale * 100)}" step="1"><span class="unit">%</span></div>
+    <div class="row"><label>Rotation</label><input class="num" type="number" inputmode="decimal" data-tf="rot" value="${Math.round((T.rot || 0) * 180 / Math.PI)}" step="1"><span class="unit">°</span></div></div>`;
+}
+function syncTfFields(){
+  const l = selLayer(); if(!l) return;
+  const T = tf(l), sc = P.querySelector('[data-tf="scale"]'), ro = P.querySelector('[data-tf="rot"]');
+  if(sc && document.activeElement !== sc) sc.value = Math.round(T.scale * 100);
+  if(ro && document.activeElement !== ro) ro.value = Math.round((T.rot || 0) * 180 / Math.PI);
 }
 function pills(key, opts, val){
   return `<div class="pills" data-pills="${key}">${opts.map(([v, t]) => `<button class="pill ${String(val) === String(v) ? "on" : ""}" data-v="${v}">${t}</button>`).join("")}</div>`;
@@ -1286,14 +1329,14 @@ function renderPanel(){
   else if(tab === "photo"){
     const ids = Object.keys(media);
     const DEL = `<button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button>`;
-    h = (l && l.kind === "photo" ? `<h3>Photo sélectionnée ${DEL}</h3>${commonImageProps(l)}<div class="sep"></div>` : "") +
+    h = (l && l.kind === "photo" ? `<h3>Photo sélectionnée ${DEL}</h3>${tfFields(l)}${commonImageProps(l)}<div class="sep"></div>` : "") +
       `<label class="big upl">${ICONS.upload} Importer des photos<input type="file" accept="image/*" multiple data-upload="layer"></label>${APP_HINT}
       <p class="hint">Les photos importées s'ajoutent en calque. Touche une vignette pour la remettre sur le visuel.</p>
       ${ids.length ? `<div class="sep"></div><h3>Mes photos <button class="pill" data-act="clearMedia">Vider</button></h3><div class="grid">${ids.map(id => `<div class="mwrap"><button class="thumb sq" data-media="${id}" style="width:100%"><img src="${media[id]}" alt=""></button><button class="delbtn" data-delmedia="${id}" title="Supprimer cette photo">${ICONS.trash}</button></div>`).join("")}</div>` : ""}`;
   }
   else if(tab === "el"){
     const cats = [...new Set(LIB.elements.map(e => e.category || "Éléments"))];
-    h = (l && l.type === "image" && l.kind !== "photo" ? `<h3>Élément sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3>
+    h = (l && l.type === "image" && l.kind !== "photo" ? `<h3>Élément sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3>${tfFields(l)}
       ${(LIB.elements.find(e => e.src === l.src)?.tintable ?? l.tintable) !== false ? `<h3>Couleur</h3>${swatches("tint", l.tintOn ? l.tint : "")}<div style="height:8px"></div>` : ""}
       ${slider("opacity", "Opacité", 0.05, 1, 0.01, l.opacity)}
       <div class="row">${pills("shadow", [["false","Sans ombre"],["true","Ombre"]], l.shadow)}<button class="pill" data-act="flip" style="margin-left:auto">↔ Miroir</button></div>
@@ -1302,7 +1345,7 @@ function renderPanel(){
   }
   else if(tab === "text"){
     if(l && l.type === "text"){
-      h = `<h3>Texte sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3><div class="stack"><textarea data-k="text" rows="2">${esc(l.text)}</textarea></div>
+      h = `<h3>Texte sélectionné <button class="delbtn" data-act="delSel" title="Supprimer">${ICONS.trash}</button></h3>${tfFields(l)}<div class="stack"><textarea data-k="text" rows="2">${esc(l.text)}</textarea></div>
         <div style="height:10px"></div>
         <div class="fonts" data-pills="font">${FONTS.map(f => `<button class="pill ${l.font === f.fam ? "on" : ""}" data-v="${f.fam}" style="font-family:'${f.fam}';font-weight:${f.w}">${f.label}</button>`).join("")}</div>
         <div style="height:10px"></div>
@@ -1328,7 +1371,7 @@ function renderPanel(){
   }
   else if(tab === "score"){
     if(l && l.type === "score"){
-      h = `<h3>Mise en forme <button class="delbtn" data-act="delSel" title="Supprimer ce bloc score">${ICONS.trash}</button></h3>${pills("style", [["hero","Grand score"],["list","Liste de matchs"],["minimal","Minimal"]], l.style)}
+      h = `<h3>Mise en forme <button class="delbtn" data-act="delSel" title="Supprimer ce bloc score">${ICONS.trash}</button></h3>${tfFields(l)}${pills("style", [["hero","Grand score"],["list","Liste de matchs"],["minimal","Minimal"]], l.style)}
         <div class="sep"></div>
         <div class="stack">
           <input class="txt" data-k="tag" placeholder="Bandeau (ex : VICTOIRE !)" value="${esc(l.tag)}">
@@ -1409,6 +1452,21 @@ P.addEventListener("input", e => {
     const k = t.dataset.k;
     const v = t.type === "range" ? parseFloat(t.value) : t.value;
     if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) l[k] = v;
+    if(t.type === "range"){ const n = t.parentElement.querySelector(`[data-num="${k}"]`); if(n) n.value = n.dataset.pct ? Math.round(v * 100) : +v.toFixed(+t.step < 1 ? 2 : 0); }
+    requestRender();
+  } else if(t.dataset.num){
+    const k = t.dataset.num, r = t.parentElement.querySelector(`input[type=range][data-k="${k}"]`);
+    let v = parseFloat(String(t.value).replace(",", ".")); if(isNaN(v)) return;
+    if(t.dataset.pct) v /= 100;
+    const lo = parseFloat(r.min), hi = parseFloat(r.max);
+    // le champ chiffré peut dépasser la réglette pour les tailles (pas pour les %)
+    v = t.dataset.pct ? Math.max(lo, Math.min(hi, v)) : Math.max(k === "size" ? 4 : lo, v);
+    if(k.startsWith("bg.")) doc.bg[k.slice(3)] = v; else if(l) l[k] = v;
+    r.value = v; requestRender();
+  } else if(t.dataset.tf && l){
+    let v = parseFloat(String(t.value).replace(",", ".")); if(isNaN(v)) return;
+    const T = editT(l);
+    if(t.dataset.tf === "scale") T.scale = Math.max(.01, v / 100); else T.rot = v * Math.PI / 180;
     requestRender();
   } else if(t.dataset.m && l){
     const i = +t.closest("[data-mi]").dataset.mi; l.matches[i][t.dataset.m] = t.value; requestRender();
@@ -1419,7 +1477,7 @@ P.addEventListener("input", e => {
 P.addEventListener("change", e => {
   const t = e.target;
   if(t.dataset.colin){ applyColor(t.dataset.colin, t.value, true); return; }
-  if(t.dataset.k || t.dataset.m){ commit(); if(tab === "layers") renderPanel(); }
+  if(t.dataset.k || t.dataset.m || t.dataset.num || t.dataset.tf){ commit(); if(tab === "layers") renderPanel(); }
 });
 function applyColor(key, val, done){
   const l = selLayer();
@@ -1841,6 +1899,7 @@ function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("sh
    DÉMARRAGE
    ============================================================ */
 $("#undo").onclick = undo; $("#redo").onclick = redo;
+$("#pasteBtn").onclick = pasteLayer;
 $("#safeBtn").onclick = () => { showSafe = !showSafe; $("#safeBtn").classList.toggle("on", showSafe); requestRender(); };
 new ResizeObserver(() => layoutCanvas()).observe($("#stage"));
 
