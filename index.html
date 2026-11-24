@@ -436,15 +436,27 @@ function drawScore(ctx, l, draw = true){
   const out = [];   // liste d'ops différées (pour mesurer d'abord)
   let y = 0;
   const win = m => { const a = parseFloat(m.sa), b = parseFloat(m.sb); return isNaN(a)||isNaN(b)||a===b ? 0 : (a > b ? 1 : 2); };
-  // tag
+  // Polices et couleurs (gagnant / texte normal avec leur opacité, bandeau séparé)
+  const fS = l.fontScore || "Anton", fT = l.fontText || "Barlow Condensed", itT = fT === "Barlow Condensed";
+  const aA = l.accentAlpha ?? 1, tA = l.textAlpha ?? 1;
+  const WIN = hexA(c.accent, aA), TXT = hexA(c.text, tA), DIM = hexA(c.text, tA * .55);
+  const HEAD = c.head || c.accent, INK = c.ink || "#0A0A0A";
+  const colA = w => w === 1 ? WIN : w === 2 ? DIM : TXT, colB = w => w === 2 ? WIN : w === 1 ? DIM : TXT;
+  // Dessine des segments [texte, couleur] centrés sur x
+  const segs = (parts, x, yy) => {
+    const ws = parts.map(([t]) => ctx.measureText(t).width), tot = ws.reduce((a, b) => a + b, 0);
+    let cx0 = x - tot / 2; ctx.textAlign = "left";
+    parts.forEach(([t, col], k) => { ctx.fillStyle = col; ctx.fillText(t, cx0, yy); cx0 += ws[k]; });
+  };
+  // badge
   if(l.tag && l.tag.trim()){
     const t = l.tag.toUpperCase();
-    ctx.font = fontStr("Anton", 58);
+    ctx.font = fontStr(fS, 58);
     const tw = ctx.measureText(t).width + 56, th = 86, ty = y;
     out.push(() => {
       ctx.save(); ctx.translate(W/2, ty + th/2); ctx.rotate(-0.035);
-      ctx.fillStyle = c.accent; rr(ctx, -tw/2, -th/2, tw, th, 16); ctx.fill();
-      ctx.fillStyle = c.ink; ctx.font = fontStr("Anton", 58); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = HEAD; rr(ctx, -tw/2, -th/2, tw, th, 16); ctx.fill();
+      ctx.fillStyle = INK; ctx.font = fontStr(fS, 58); ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(t, 0, 4); ctx.restore();
     });
     y += th + 22;
@@ -452,9 +464,9 @@ function drawScore(ctx, l, draw = true){
   const subH = (l.sub && l.style !== "minimal") ? 62 : 0;
   const drawSubIn = (py, ph) => {
     if(!subH) return;
-    ctx.fillStyle = hexA(c.text, .12); ctx.fillRect(40, py + ph - subH, W - 80, 2);
+    ctx.fillStyle = hexA(c.text, .12 * tA); ctx.fillRect(40, py + ph - subH, W - 80, 2);
     fitFont(ctx, l.sub, "Inter", 34, W - 80);
-    ctx.fillStyle = hexA(c.text, .85); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = hexA(c.text, .85 * tA); ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(l.sub, W/2, py + ph - subH/2 + 1);
   };
   if(l.style === "hero"){
@@ -462,8 +474,8 @@ function drawScore(ctx, l, draw = true){
     if(l.label){
       const ly = y;
       out.push(() => {
-        const s = fitFont(ctx, l.label.toUpperCase(), "Barlow Condensed", 50, W - 40, true);
-        ctx.fillStyle = c.text; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        fitFont(ctx, l.label.toUpperCase(), fT, 50, W - 40, itT);
+        ctx.fillStyle = TXT; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(l.label.toUpperCase(), W/2, ly + 28);
       });
       y += 66;
@@ -472,14 +484,14 @@ function drawScore(ctx, l, draw = true){
     out.push(() => {
       ctx.fillStyle = hexA(c.panel, l.panelAlpha); rr(ctx, 0, py, W, ph, R); ctx.fill();
       ctx.textBaseline = "alphabetic";
-      ctx.font = fontStr("Anton", 230);
-      ctx.fillStyle = w === 1 ? c.accent : c.text; ctx.textAlign = "right"; ctx.fillText(String(m.sa ?? ""), W/2 - 70, py + 250);
-      ctx.fillStyle = w === 2 ? c.accent : c.text; ctx.textAlign = "left";  ctx.fillText(String(m.sb ?? ""), W/2 + 70, py + 250);
-      ctx.fillStyle = hexA(c.text, .6); ctx.textAlign = "center"; ctx.font = fontStr("Anton", 120); ctx.fillText("–", W/2, py + 215);
-      [[m.a, W*.25], [m.b, W*.75]].forEach(([t, x]) => {
+      fitFont(ctx, String(m.sa ?? "") + String(m.sb ?? ""), fS, 230, W - 260, false, 60);
+      ctx.fillStyle = colA(w); ctx.textAlign = "right"; ctx.fillText(String(m.sa ?? ""), W/2 - 70, py + 250);
+      ctx.fillStyle = colB(w); ctx.textAlign = "left";  ctx.fillText(String(m.sb ?? ""), W/2 + 70, py + 250);
+      ctx.fillStyle = hexA(c.text, .6 * tA); ctx.textAlign = "center"; ctx.font = fontStr(fS, 120); ctx.fillText("–", W/2, py + 215);
+      [[m.a, W*.25, colA(w)], [m.b, W*.75, colB(w)]].forEach(([t, x, col]) => {
         t = (t || "").toUpperCase();
-        fitFont(ctx, t, "Barlow Condensed", 54, W/2 - 60, false);
-        ctx.fillStyle = c.text; ctx.textAlign = "center"; ctx.fillText(t, x, py + 322);
+        fitFont(ctx, t, fT, 54, W/2 - 60, false);
+        ctx.fillStyle = col; ctx.textAlign = "center"; ctx.fillText(t, x, py + 322);
       });
       drawSubIn(py, ph);
     });
@@ -491,24 +503,23 @@ function drawScore(ctx, l, draw = true){
       ctx.fillStyle = hexA(c.panel, l.panelAlpha); rr(ctx, 0, py, W, ph, R); ctx.fill();
       if(hh){
         ctx.save(); rr(ctx, 0, py, W, ph, R); ctx.clip();
-        ctx.fillStyle = c.accent; ctx.fillRect(0, py, W, hh); ctx.restore();
-        fitFont(ctx, l.label.toUpperCase(), "Anton", 56, W - 60);
-        ctx.fillStyle = c.ink; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = HEAD; ctx.fillRect(0, py, W, hh); ctx.restore();
+        fitFont(ctx, l.label.toUpperCase(), fS, 56, W - 60);
+        ctx.fillStyle = INK; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(l.label.toUpperCase(), W/2, py + hh/2 + 3);
       }
       ms.forEach((m, i) => {
         const ry = py + hh + i * rh + 4, cy = ry + rh/2, w = win(m);
-        if(i > 0){ ctx.fillStyle = hexA(c.text, .12); ctx.fillRect(40, ry, W - 80, 2); }
+        if(i > 0){ ctx.fillStyle = hexA(c.text, .12 * tA); ctx.fillRect(40, ry, W - 80, 2); }
         ctx.textBaseline = "middle";
         const ta = (m.a || "").toUpperCase(), tb = (m.b || "").toUpperCase();
-        fitFont(ctx, ta, "Barlow Condensed", 50, 300); ctx.textAlign = "right";
-        ctx.fillStyle = w === 2 ? hexA(c.text, .55) : c.text; ctx.fillText(ta, W/2 - 120, cy + 2);
-        fitFont(ctx, tb, "Barlow Condensed", 50, 300); ctx.textAlign = "left";
-        ctx.fillStyle = w === 1 ? hexA(c.text, .55) : c.text; ctx.fillText(tb, W/2 + 120, cy + 2);
-        ctx.fillStyle = hexA(c.text, .1); rr(ctx, W/2 - 98, cy - 40, 196, 80, 18); ctx.fill();
-        ctx.font = fontStr("Anton", 58); ctx.textAlign = "center";
-        ctx.fillStyle = w ? c.accent : c.text;
-        ctx.fillText(`${m.sa ?? ""} - ${m.sb ?? ""}`, W/2, cy + 4);
+        fitFont(ctx, ta, fT, 50, 300); ctx.textAlign = "right";
+        ctx.fillStyle = colA(w); ctx.fillText(ta, W/2 - 120, cy + 2);
+        fitFont(ctx, tb, fT, 50, 300); ctx.textAlign = "left";
+        ctx.fillStyle = colB(w); ctx.fillText(tb, W/2 + 120, cy + 2);
+        ctx.fillStyle = hexA(c.text, .1 * tA); rr(ctx, W/2 - 98, cy - 40, 196, 80, 18); ctx.fill();
+        fitFont(ctx, `${m.sa ?? ""} - ${m.sb ?? ""}`, fS, 58, 176, false, 24);
+        segs([[String(m.sa ?? ""), w === 1 ? WIN : TXT], [" - ", DIM], [String(m.sb ?? ""), w === 2 ? WIN : TXT]], W/2, cy + 4);
       });
       drawSubIn(py, ph);
     });
@@ -517,20 +528,21 @@ function drawScore(ctx, l, draw = true){
     if(l.label){
       const ly = y;
       out.push(() => {
-        fitFont(ctx, l.label.toUpperCase(), "Barlow Condensed", 52, W, true);
-        ctx.fillStyle = c.accent; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        fitFont(ctx, l.label.toUpperCase(), fT, 52, W, itT);
+        ctx.fillStyle = HEAD; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(l.label.toUpperCase(), W/2, ly + 30);
       });
       y += 72;
     }
     ms.forEach(m => {
-      const my = y;
+      const my = y, w = win(m);
       out.push(() => {
-        const t = `${(m.a||"").toUpperCase()}  ${m.sa ?? ""}-${m.sb ?? ""}  ${(m.b||"").toUpperCase()}`;
-        fitFont(ctx, t, "Anton", 104, W);
+        const A = (m.a || "").toUpperCase(), B = (m.b || "").toUpperCase();
+        const parts = [[A + "  ", colA(w)], [String(m.sa ?? ""), w === 1 ? WIN : TXT], ["-", DIM], [String(m.sb ?? ""), w === 2 ? WIN : TXT], ["  " + B, colB(w)]];
+        fitFont(ctx, parts.map(p => p[0]).join(""), fS, 104, W);
         ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 5;
-        ctx.fillStyle = c.text; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(t, W/2, my + 62);
+        ctx.textBaseline = "middle";
+        segs(parts, W/2, my + 62);
         ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
       });
       y += 124;
@@ -540,9 +552,9 @@ function drawScore(ctx, l, draw = true){
     y += 18; const sy = y;
     out.push(() => {
       fitFont(ctx, l.sub, "Inter", 36, W);
-      ctx.fillStyle = c.text; ctx.globalAlpha *= .9;
+      ctx.fillStyle = hexA(c.text, .9 * tA);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      if(l.style === "minimal"){ ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 16; }
+      ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 16;
       ctx.fillText(l.sub, W/2, sy + 22);
       ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
     });
@@ -1075,7 +1087,8 @@ function textLayer(o = {}){
 function scoreLayer(o = {}){
   return baseLayer("score", Object.assign({name:"Score", style:"hero", label:"Championnat de France", sub:"", tag:"",
     matches:[{a:"Lutèce", b:"Adversaire", sa:"15", sb:"12"}],
-    colors:{panel:"#101A3C", accent:"#FFBB00", text:"#FFFFFF", ink:"#101A3C"}, panelAlpha:.92}, o));
+    colors:{panel:"#101A3C", accent:"#FFBB00", head:"#FFBB00", text:"#FFFFFF", ink:"#101A3C"}, panelAlpha:.92,
+    accentAlpha:1, textAlpha:1, fontScore:"Anton", fontText:"Barlow Condensed"}, o));
 }
 function imageLayer(src, o = {}){
   return baseLayer("image", Object.assign({name:"Image", src, base:600, shape:"none", border:0, borderColor:"#FFFFFF",
@@ -1185,6 +1198,9 @@ function swatches(key, val, extra = ""){
   const cols = [...new Set([...PAL])];
   return `<div class="sw" data-sw="${key}" ${extra}>${cols.map(c => `<button data-col="${c}" style="background:${c}" class="${(val||"").toLowerCase() === c.toLowerCase() ? "on" : ""}"></button>`).join("")}
     <label class="custom" title="Autre couleur">+<input type="color" value="${val || "#ffffff"}" data-colin="${key}"></label></div>`;
+}
+function fontPills(key, val){
+  return `<div class="fonts" data-pills="${key}">${FONTS.map(f => `<button class="pill ${val === f.fam ? "on" : ""}" data-v="${f.fam}" style="font-family:'${f.fam}';font-weight:${f.w}">${f.label}</button>`).join("")}</div>`;
 }
 function slider(key, label, min, max, step, val){
   return `<div class="row"><label>${label}</label><input type="range" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`;
@@ -1298,10 +1314,18 @@ function renderPanel(){
         <div style="height:10px"></div>
         <input class="txt" data-k="sub" placeholder="Date, lieu… (optionnel)" value="${esc(l.sub)}">
         <div class="sep"></div>
+        <h3>Police des scores${l.style === "list" ? " et du bandeau" : ""}</h3>${fontPills("fontScore", l.fontScore || "Anton")}
+        <h3 style="margin-top:12px">Police des équipes et textes</h3>${fontPills("fontText", l.fontText || "Barlow Condensed")}
+        <div class="sep"></div>
+        <h3>Couleur du gagnant</h3>${swatches("c.accent", l.colors.accent)}
+        ${slider("accentAlpha", "Opacité", 0.1, 1, 0.01, l.accentAlpha ?? 1)}
+        <h3>Couleur du texte</h3>${swatches("c.text", l.colors.text)}
+        ${slider("textAlpha", "Opacité", 0.1, 1, 0.01, l.textAlpha ?? 1)}
+        <div class="sep"></div>
         <h3>Couleur du panneau</h3>${swatches("c.panel", l.colors.panel)}
         ${l.style !== "minimal" ? slider("panelAlpha", "Opacité", 0, 1, 0.01, l.panelAlpha) : ""}
-        <h3>Couleur d'accent (gagnant)</h3>${swatches("c.accent", l.colors.accent)}
-        <h3 style="margin-top:12px">Couleur du texte</h3>${swatches("c.text", l.colors.text)}
+        <h3>${l.style === "minimal" ? "Couleur du titre et du badge" : "Couleur du bandeau et du badge"}</h3>${swatches("c.head", l.colors.head || l.colors.accent)}
+        ${l.style !== "minimal" || (l.tag || "").trim() ? `<h3 style="margin-top:12px">Texte sur le bandeau</h3>${swatches("c.ink", l.colors.ink || "#0A0A0A")}` : ""}
         <div class="sep"></div><button class="big ghost" data-act="addScore">${ICONS.plus} Nouveau bloc score</button>`;
     } else {
       h = `<h3>Ajouter un résultat</h3><div class="stack">
@@ -1537,7 +1561,7 @@ const TEMPLATES = [
   {name:"Résultats tournoi", make: () => ({bg:{kind:"asset", src:bgSrc(1)}, layers:[
     textLayer({text:"WEEK-END\nDE TOURNOI", size:150, color:"#FFFFFF", y:.24, lh:.95}),
     scoreLayer({style:"list", label:"Open de Paris", sub:"Samedi & dimanche · Paris 13e", y:.58, scale:.95,
-      colors:{panel:"#0A0A0A", accent:"#FFBB00", text:"#FFFFFF", ink:"#0A0A0A"}, panelAlpha:.55,
+      colors:{panel:"#0A0A0A", accent:"#FFBB00", head:"#FFBB00", text:"#FFFFFF", ink:"#0A0A0A"}, panelAlpha:.55,
       matches:[{a:"Lutèce", b:"Équipe A", sa:"13", sb:"9"},{a:"Lutèce", b:"Équipe B", sa:"11", sb:"13"},{a:"Lutèce", b:"Équipe C", sa:"15", sb:"7"},{a:"Lutèce", b:"Équipe D", sa:"12", sb:"10"}]})
   ]})},
   {name:"Match day", make: () => ({bg:{kind:"asset", src:bgSrc(0)}, layers:[
