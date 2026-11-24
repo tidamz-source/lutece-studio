@@ -1,6 +1,6 @@
 // Lutèce Studio — cache hors ligne
 // Change VERSION à chaque mise en ligne pour forcer la mise à jour des fichiers.
-const VERSION = "ls-6";
+const VERSION = "ls-7";
 const FILES = [
   "./",
   "index.html",
@@ -28,6 +28,7 @@ const FILES = [
   "fonts/inter-latin-700-normal.woff2",
   "fonts/inter-latin-800-normal.woff2",
   "fonts/permanent-marker-latin-400-normal.woff2",
+  "fonts/sofia-pro-comp-black.woff2",
   "icons/icon-180.png",
   "icons/icon-192.png",
   "icons/icon-512.png",

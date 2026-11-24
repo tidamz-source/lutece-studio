@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <style>
+@font-face{font-family:"Sofia Pro Comp";font-weight:900;font-style:normal;font-display:swap;src:url(fonts/sofia-pro-comp-black.woff2) format("woff2")}
 @font-face{font-family:"Anton";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/anton-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Bebas Neue";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/bebas-neue-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Archivo Black";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/archivo-black-latin-400-normal.woff2) format("woff2")}
@@ -214,6 +215,7 @@ const FORMATS = {
   "1x1":  {w:1080, h:1080, label:"1:1",  name:"Carré"}
 };
 const FONTS = [
+  {fam:"Sofia Pro Comp", w:900, label:"Sofia"},
   {fam:"Anton", w:400, label:"Anton"},
   {fam:"Bebas Neue", w:400, label:"Bebas"},
   {fam:"Archivo Black", w:400, label:"Archivo"},
@@ -379,7 +381,7 @@ function rr(ctx, x, y, w, h, r){
   ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
 }
 function fontStr(fam, size, italic){
-  const f = FONTS.find(f => f.fam === fam) || FONTS[0];
+  const f = FONTS.find(f => f.fam === fam) || FONTS.find(f => f.fam === "Anton");
   return `${italic ? "italic " : ""}${f.w} ${size}px "${f.fam}"`;
 }
 function hexA(hex, a){
