@@ -28,13 +28,6 @@
  ],
  "elements": [
   {
-   "id": "signature",
-   "name": "Signature",
-   "src": "assets/elements/signature.png",
-   "tintable": true,
-   "category": "Logo"
-  },
-  {
    "id": "stelly-revers",
    "name": "Revers",
    "src": "assets/elements/stelly-revers.png",

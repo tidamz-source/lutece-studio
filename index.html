@@ -272,7 +272,26 @@ let uid = Date.now() % 100000;
 const nid = () => "l" + (uid++).toString(36);
 
 function newDoc(){
-  return {format:"9x16", bg:{kind:"asset", src:LIB.backgrounds[0]?.src || null, color:"#101A3C", zoom:1, ox:0, oy:0, veil:0, veilMode:"uni", veilColor:"#000000"}, layers:[]};
+  return {format:"9x16", bg:{kind:"asset", src:LIB.backgrounds[0]?.src || null, color:"#101A3C", zoom:1, ox:0, oy:0, veil:0, veilMode:"uni", veilColor:"#000000"}, layers:[], logo:{show:true, color:"#FFFFFF"}};
+}
+/* --- Logo Lutèce : toujours en bas, au-dessus de tout (masquable) --- */
+const LOGO_SRC = "assets/elements/signature.png";
+const LOGO = {w:220.8, cx:.5037, fromBottom:(1 - .942) * 1920};   // calé sur le logo des fonds de la bibliothèque (1080 px de large)
+function ensureLogo(d){
+  if(!d.logo){
+    // anciens visuels : la signature était un calque épinglé en bas -> on la convertit
+    const sig = d.layers.find(l => l.pin === "bottom");
+    d.logo = {show: sig ? !sig.hidden : true, color: sig && sig.tintOn ? sig.tint : "#FFFFFF"};
+  }
+  d.layers = d.layers.filter(l => l.pin !== "bottom");
+  return d;
+}
+function drawLogo(ctx, W, H, d){
+  const lg = d.logo; if(!lg || lg.show === false) return;
+  const im = getImg(LOGO_SRC); if(!im) return;
+  const src = (lg.color && lg.color.toUpperCase() !== "#FFFFFF") ? tinted(LOGO_SRC, im, lg.color) : im;
+  const w = LOGO.w * W / 1080, h = w * im.naturalHeight / im.naturalWidth;
+  ctx.drawImage(src, LOGO.cx * W - w/2, H - LOGO.fromBottom * W / 1080 - h/2, w, h);
 }
 const F = () => FORMATS[doc.format];
 /* Transform d'un calque pour un format : réglage propre au format (fx) sinon dérivé du format d'origine (af) */
@@ -660,6 +679,7 @@ function renderDoc(ctx, W, H, d, fmt){
     l._w = dm.w; l._h = dm.h;
     ctx.restore();
   }
+  drawLogo(ctx, W, H, d);
 }
 
 /* ============================================================
@@ -967,6 +987,7 @@ async function writeDraft(){
 }
 function cleanLoaded(p){
   p.pages.forEach(d => {
+    ensureLogo(d);
     d.layers = d.layers.filter(l => !(l.src && l.src.startsWith("media:") && !media[l.src.slice(6)]));
     if(d.bg.src && d.bg.src.startsWith("media:") && !media[d.bg.src.slice(6)]) d.bg.kind = "color";
   });
@@ -1240,6 +1261,10 @@ function renderPanel(){
       <div class="sep"></div>
       <label class="big ghost upl">${ICONS.upload} Ma photo en fond<input type="file" accept="image/*" data-upload="bg"></label>${APP_HINT}
       <div class="sep"></div>
+      <h3>Logo Lutèce <small style="text-transform:none;letter-spacing:0">en bas, toujours devant</small></h3>
+      ${pills("logoShow", [["true","Afficher"],["false","Masquer"]], (doc.logo || {}).show !== false)}
+      ${(doc.logo || {}).show !== false ? `<div style="height:10px"></div>${swatches("logoColor", (doc.logo || {}).color || "#FFFFFF")}` : ""}
+      <div class="sep"></div>
       <h3>Couleur unie</h3>${swatches("bgColor", bg.kind === "color" ? bg.color : "")}
       ${bgAlign(bg, doc.format) ? `<div class="sep"></div><h3>Alignement du fond en ${F().label}</h3>
         ${pills("bgAlign", [["bottom","En bas (logo visible)"],["center","Centré"]], bgAlign(bg, doc.format))}` : ""}
@@ -1346,7 +1371,10 @@ function renderPanel(){
   }
   else if(tab === "layers"){
     const ls = [...doc.layers].reverse();
-    h = `<h3>Calques <span style="text-transform:none;letter-spacing:0">${ls.length} · haut = devant</span></h3>` + (ls.map(x => {
+    const lgOn = (doc.logo || {}).show !== false;
+    h = `<h3>Calques <span style="text-transform:none;letter-spacing:0">${ls.length} · haut = devant</span></h3>
+      <div class="layer" style="opacity:.9"><span class="grip" style="opacity:.25">${ICONS.lock}</span><div class="ic" style="background:#2b3157"><img src="${LOGO_SRC}" alt=""></div><div class="nm">Logo Lutèce <small style="color:var(--muted)">· toujours devant</small></div>
+        <button data-act="logoToggle" class="${lgOn ? "" : "off"}" title="${lgOn ? "Masquer" : "Afficher"}">${ICONS.eye}</button></div>` + (ls.map(x => {
       const ic = x.type === "image" ? `<img src="${esc(resolveSrc(x.src))}" alt="">` : ICONS[x.type === "text" ? "text" : "score"];
       const nm = x.type === "text" ? x.text.split("\n")[0] : x.type === "score" ? `Score · ${x.matches[0]?.a || ""} ${x.matches[0]?.sa || ""}-${x.matches[0]?.sb || ""}` : x.name;
       return `<div class="layer ${sel === x.id ? "on" : ""}" data-lid="${x.id}">
@@ -1392,6 +1420,7 @@ function applyColor(key, val, done){
   const l = selLayer();
   if(key === "bgColor" && tab === "bg"){ doc.bg.kind = "color"; doc.bg.color = val; }
   else if(key === "veilColor"){ doc.bg.veilColor = val; }
+  else if(key === "logoColor"){ doc.logo = doc.logo || {show:true}; doc.logo.color = val; }
   else if(key === "tint" && l){ l.tint = val; l.tintOn = true; }
   else if(l) setPath(l, key, val);
   requestRender();
@@ -1408,6 +1437,7 @@ P.addEventListener("click", async e => {
     const k = pg.dataset.pills; let v = t.dataset.v;
     if(v === "true") v = true; else if(v === "false") v = false;
     if(k === "veilMode"){ doc.bg.veilMode = v; if(!doc.bg.veil) doc.bg.veil = .5; }
+    else if(k === "logoShow"){ doc.logo = doc.logo || {color:"#FFFFFF"}; doc.logo.show = v; }
     else if(k === "bgAlign"){ doc.bg.align = doc.bg.align || {}; doc.bg.align[doc.format] = v; }
     else if(l){
       l[k] = v;
@@ -1425,9 +1455,7 @@ P.addEventListener("click", async e => {
   // éléments
   if(t.dataset.elt){
     const el = LIB.elements.find(x => x.id === t.dataset.elt);
-    const n = el.id === "signature"
-      ? imageLayer(el.src, {name:"Signature Lutèce", kind:"element", tintable:true, pin:"bottom", base:220.8, x:.5037, y:.942, af:"9x16"})
-      : imageLayer(el.src, {name: el.name, kind:"element", base: 380, tintable: el.tintable !== false, x: .5 + (Math.random() - .5) * .1, y: .5 + (Math.random() - .5) * .1});
+    const n = imageLayer(el.src, {name: el.name, kind:"element", base: 380, tintable: el.tintable !== false, x: .5 + (Math.random() - .5) * .1, y: .5 + (Math.random() - .5) * .1});
     addLayer(n); toast("Élément ajouté — glisse-le où tu veux"); return;
   }
   if(t.dataset.media){ addLayer(imageLayer("media:" + t.dataset.media, {name:"Photo", kind:"photo", base:700})); return; }
@@ -1472,6 +1500,7 @@ P.addEventListener("click", async e => {
   if(a === "addMatch" && l){ l.matches.push({a:"Lutèce", b:"", sa:"", sb:""}); commit(); renderPanel(); requestRender(); }
   if(a === "delSel" && l){ askDelete(l.id); return; }
   if(a === "saveDraft"){ saveAsDraft(); return; }
+  if(a === "logoToggle"){ doc.logo = doc.logo || {color:"#FFFFFF"}; doc.logo.show = doc.logo.show === false; commit(); renderPanel(); requestRender(); return; }
   if(a === "renameDraft"){ renameDraft(); return; }
   if(a === "newVisual"){ newVisual(); return; }
   if(a === "flip" && l){ l.flip = !l.flip; commit(); requestRender(); }
@@ -1581,8 +1610,7 @@ const TEMPLATES = [
   ]})},
   {name:"Photo + score", make: () => ({bg:{kind:"asset", src:bgSrc(2), veil:.6, veilMode:"bas"}, layers:[
     textLayer({text:"Remplace le fond par ta photo", font:"Inter", upper:false, size:54, style:"box", bgColor:"#EF3E36", y:.12}),
-    scoreLayer({style:"hero", label:"Finale régionale", tag:"", y:.66, scale:.95, panelAlpha:.85}),
-    imageLayer(LIB.elements.find(e => e.id === "signature")?.src, {kind:"element", name:"Signature Lutèce", tintable:true, pin:"bottom", base:220.8, x:0.5037, y:0.9420})
+    scoreLayer({style:"hero", label:"Finale régionale", tag:"", y:.66, scale:.95, panelAlpha:.85})
   ]})}
 ];
 function applyTemplateTo(d, i){
@@ -1590,6 +1618,7 @@ function applyTemplateTo(d, i){
   d.bg = Object.assign({kind:"asset", src:null, color:"#101A3C", zoom:1, ox:0, oy:0, veil:0, veilMode:"uni", veilColor:"#000000"}, t.bg);
   d.layers = t.layers;
   d.layers.forEach(l => { l.af = "9x16"; l.fx = {}; });
+  ensureLogo(d);
 }
 async function applyTemplate(i){
   if(doc.layers.length && !(await confirmBox("Remplacer le visuel ?", "Les calques actuels seront remplacés par le modèle « " + TEMPLATES[i].name + " ». Tu pourras annuler.", "Remplacer"))) return;
@@ -1633,7 +1662,7 @@ function switchPage(i){
 function addPage(copy){
   const np = copy ? JSON.parse(ser(doc)) : {format:doc.format, bg:JSON.parse(JSON.stringify(doc.bg)), layers:[]};
   if(copy) np.layers.forEach(l => l.id = nid());
-  else { const sig = doc.layers.find(l => l.pin === "bottom"); if(sig){ const c = JSON.parse(ser(sig)); c.id = nid(); np.layers.push(c); } }
+  np.logo = JSON.parse(JSON.stringify(doc.logo || {show:true, color:"#FFFFFF"}));
   proj.pages.splice(proj.cur + 1, 0, np);
   proj.cur++; doc = np; sel = null;
   commit(); renderPages(); renderPanel(); renderCtx(); layoutCanvas();
