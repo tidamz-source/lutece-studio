@@ -17,7 +17,6 @@ const FILES = [
   "assets/elements/stelly-mains-jointes.png",
   "assets/elements/stelly-revers.png",
   "assets/elements/stelly-sky.png",
-  "fonts/anton-latin-400-normal.woff2",
   "fonts/archivo-black-latin-400-normal.woff2",
   "fonts/barlow-condensed-latin-600-normal.woff2",
   "fonts/barlow-condensed-latin-800-italic.woff2",

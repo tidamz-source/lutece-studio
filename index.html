@@ -14,7 +14,6 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <style>
 @font-face{font-family:"Sofia Pro Comp";font-weight:900;font-style:normal;font-display:swap;src:url(fonts/sofia-pro-comp-black.woff2) format("woff2")}
-@font-face{font-family:"Anton";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/anton-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Bebas Neue";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/bebas-neue-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Archivo Black";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/archivo-black-latin-400-normal.woff2) format("woff2")}
 @font-face{font-family:"Permanent Marker";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/permanent-marker-latin-400-normal.woff2) format("woff2")}
@@ -37,7 +36,7 @@ button{cursor:pointer}
 #app{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto auto auto;height:100dvh;padding-top:var(--safe-t)}
 /* header */
 header{display:flex;align-items:center;gap:6px;padding:8px 10px;min-width:0;border-bottom:1px solid var(--line);background:var(--panel)}
-.brand{font:400 20px Anton,sans-serif;letter-spacing:.5px;white-space:nowrap}
+.brand{font:900 21px "Sofia Pro Comp",sans-serif;letter-spacing:.5px;white-space:nowrap}
 .brand span{color:var(--accent)}
 .seg{display:flex;background:var(--bg);border-radius:10px;padding:3px;margin:0 auto}
 .seg button{border:0;background:none;padding:6px 9px;border-radius:8px;font-weight:700;color:var(--muted);font-size:13px}
@@ -156,7 +155,7 @@ textarea{resize:vertical;min-height:70px}
 .modal{position:fixed;inset:0;background:rgba(5,7,15,.7);display:none;place-items:center;z-index:50;padding:20px}
 .modal.show{display:grid}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;width:min(420px,100%)}
-.card h2{margin:0 0 6px;font:400 26px Anton,sans-serif}
+.card h2{margin:0 0 6px;font:900 28px "Sofia Pro Comp",sans-serif}
 .card p{color:var(--muted);margin:0 0 14px}
 .card .stack .big{justify-content:space-between}
 .card .stack .big small{font-weight:600;opacity:.7}
@@ -216,7 +215,6 @@ const FORMATS = {
 };
 const FONTS = [
   {fam:"Sofia Pro Comp", w:900, label:"Sofia"},
-  {fam:"Anton", w:400, label:"Anton"},
   {fam:"Bebas Neue", w:400, label:"Bebas"},
   {fam:"Archivo Black", w:400, label:"Archivo"},
   {fam:"Barlow Condensed", w:800, label:"Barlow"},
@@ -381,7 +379,7 @@ function rr(ctx, x, y, w, h, r){
   ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath();
 }
 function fontStr(fam, size, italic){
-  const f = FONTS.find(f => f.fam === fam) || FONTS.find(f => f.fam === "Anton");
+  const f = FONTS.find(f => f.fam === fam) || FONTS[0];
   return `${italic ? "italic " : ""}${f.w} ${size}px "${f.fam}"`;
 }
 function hexA(hex, a){
@@ -458,7 +456,7 @@ function drawScore(ctx, l, draw = true){
   let y = 0;
   const win = m => { const a = parseFloat(m.sa), b = parseFloat(m.sb); return isNaN(a)||isNaN(b)||a===b ? 0 : (a > b ? 1 : 2); };
   // Polices et couleurs (gagnant / texte normal avec leur opacité, bandeau séparé)
-  const fS = l.fontScore || "Anton", fT = l.fontText || "Barlow Condensed", itT = fT === "Barlow Condensed";
+  const fS = l.fontScore || "Sofia Pro Comp", fT = l.fontText || "Barlow Condensed", itT = fT === "Barlow Condensed";
   const aA = l.accentAlpha ?? 1, tA = l.textAlpha ?? 1, sA = l.scoreAlpha ?? 1, winDigit = l.winDigit !== false;
   const WIN = hexA(c.accent, aA), TXT = hexA(c.text, tA), DIM = hexA(c.text, tA * .55);
   // Bloc score (chiffres) : couleur et opacité propres ; le chiffre gagnant peut prendre la couleur du gagnant
@@ -990,6 +988,11 @@ async function writeDraft(){
 function cleanLoaded(p){
   p.pages.forEach(d => {
     ensureLogo(d);
+    d.layers.forEach(l => {   // Anton remplacée par Sofia Pro Comp
+      if(l.font === "Anton") l.font = "Sofia Pro Comp";
+      if(l.fontScore === "Anton") l.fontScore = "Sofia Pro Comp";
+      if(l.fontText === "Anton") l.fontText = "Sofia Pro Comp";
+    });
     d.layers = d.layers.filter(l => !(l.src && l.src.startsWith("media:") && !media[l.src.slice(6)]));
     if(d.bg.src && d.bg.src.startsWith("media:") && !media[d.bg.src.slice(6)]) d.bg.kind = "color";
   });
@@ -1107,14 +1110,14 @@ function baseLayer(type, extra){
   return Object.assign({id:nid(), type, x:.5, y:.5, scale:1, rot:0, opacity:1, hidden:false, locked:false, af: doc ? doc.format : "9x16", fx:{}}, extra);
 }
 function textLayer(o = {}){
-  return baseLayer("text", Object.assign({name:"Texte", text:"MATCH DAY", font:"Anton", size:130, color:"#FFFFFF", bgColor:"#101A3C",
+  return baseLayer("text", Object.assign({name:"Texte", text:"MATCH DAY", font:"Sofia Pro Comp", size:130, color:"#FFFFFF", bgColor:"#101A3C",
     align:"center", style:"none", upper:true, italic:false, spacing:0, lh:1.05}, o));
 }
 function scoreLayer(o = {}){
   return baseLayer("score", Object.assign({name:"Score", style:"hero", label:"Championnat de France", sub:"", tag:"",
     matches:[{a:"Lutèce", b:"Adversaire", sa:"15", sb:"12"}],
     colors:{panel:"#101A3C", accent:"#FFBB00", head:"#FFBB00", text:"#FFFFFF", ink:"#101A3C"}, panelAlpha:.92,
-    accentAlpha:1, textAlpha:1, fontScore:"Anton", fontText:"Barlow Condensed"}, o));
+    accentAlpha:1, textAlpha:1, fontScore:"Sofia Pro Comp", fontText:"Barlow Condensed"}, o));
 }
 function imageLayer(src, o = {}){
   return baseLayer("image", Object.assign({name:"Image", src, base:600, shape:"none", border:0, borderColor:"#FFFFFF",
@@ -1317,7 +1320,7 @@ function renderPanel(){
         <div class="sep"></div><button class="big ghost" data-act="addText">${ICONS.plus} Nouveau texte</button>`;
     } else {
       h = `<h3>Ajouter un texte</h3><div class="stack">
-        <button class="big" data-act="addTitle" style="font-family:Anton;font-weight:400;font-size:22px">GROS TITRE</button>
+        <button class="big" data-act="addTitle" style="font-family:'Sofia Pro Comp';font-weight:900;font-size:22px">GROS TITRE</button>
         <button class="big ghost" data-act="addSub" style="font-family:'Barlow Condensed';font-style:italic;font-weight:800;font-size:19px">SOUS-TITRE</button>
         <button class="big ghost" data-act="addBody" style="font-weight:600">Texte courant</button>
         <button class="big ghost" data-act="addTag" style="font-family:'Permanent Marker';font-weight:400">Annotation feutre</button></div>`;
@@ -1344,7 +1347,7 @@ function renderPanel(){
         <div style="height:10px"></div>
         <input class="txt" data-k="sub" placeholder="Date, lieu… (optionnel)" value="${esc(l.sub)}">
         <div class="sep"></div>
-        <h3>Police des scores${l.style === "list" ? " et du bandeau" : ""}</h3>${fontPills("fontScore", l.fontScore || "Anton")}
+        <h3>Police des scores${l.style === "list" ? " et du bandeau" : ""}</h3>${fontPills("fontScore", l.fontScore || "Sofia Pro Comp")}
         <h3 style="margin-top:12px">Police des équipes et textes</h3>${fontPills("fontText", l.fontText || "Barlow Condensed")}
         <div class="sep"></div>
         <h3>Gagnant <small style="text-transform:none;letter-spacing:0">nom de l'équipe gagnante</small></h3>${swatches("c.accent", l.colors.accent)}
