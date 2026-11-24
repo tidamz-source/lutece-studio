@@ -464,7 +464,7 @@ function drawScore(ctx, l, draw = true){
   const subH = (l.sub && l.style !== "minimal") ? 62 : 0;
   const drawSubIn = (py, ph) => {
     if(!subH) return;
-    ctx.fillStyle = hexA(c.text, .12 * tA); ctx.fillRect(40, py + ph - subH, W - 80, 2);
+    ctx.fillStyle = hexA(c.text, .12); ctx.fillRect(40, py + ph - subH, W - 80, 2);
     fitFont(ctx, l.sub, "Inter", 34, W - 80);
     ctx.fillStyle = hexA(c.text, .85 * tA); ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(l.sub, W/2, py + ph - subH/2 + 1);
@@ -510,14 +510,14 @@ function drawScore(ctx, l, draw = true){
       }
       ms.forEach((m, i) => {
         const ry = py + hh + i * rh + 4, cy = ry + rh/2, w = win(m);
-        if(i > 0){ ctx.fillStyle = hexA(c.text, .12 * tA); ctx.fillRect(40, ry, W - 80, 2); }
+        if(i > 0){ ctx.fillStyle = hexA(c.text, .12); ctx.fillRect(40, ry, W - 80, 2); }
         ctx.textBaseline = "middle";
         const ta = (m.a || "").toUpperCase(), tb = (m.b || "").toUpperCase();
         fitFont(ctx, ta, fT, 50, 300); ctx.textAlign = "right";
         ctx.fillStyle = colA(w); ctx.fillText(ta, W/2 - 120, cy + 2);
         fitFont(ctx, tb, fT, 50, 300); ctx.textAlign = "left";
         ctx.fillStyle = colB(w); ctx.fillText(tb, W/2 + 120, cy + 2);
-        ctx.fillStyle = hexA(c.text, .1 * tA); rr(ctx, W/2 - 98, cy - 40, 196, 80, 18); ctx.fill();
+        ctx.fillStyle = hexA(c.box || c.text, l.boxAlpha ?? .1); rr(ctx, W/2 - 98, cy - 40, 196, 80, 18); ctx.fill();
         fitFont(ctx, `${m.sa ?? ""} - ${m.sb ?? ""}`, fS, 58, 176, false, 24);
         segs([[String(m.sa ?? ""), w === 1 ? WIN : TXT], [" - ", DIM], [String(m.sb ?? ""), w === 2 ? WIN : TXT]], W/2, cy + 4);
       });
@@ -1322,6 +1322,8 @@ function renderPanel(){
         <h3>Couleur du texte</h3>${swatches("c.text", l.colors.text)}
         ${slider("textAlpha", "Opacité", 0.1, 1, 0.01, l.textAlpha ?? 1)}
         <div class="sep"></div>
+        ${l.style === "list" ? `<h3>Cases des scores</h3>${swatches("c.box", l.colors.box || l.colors.text)}
+        ${slider("boxAlpha", "Opacité", 0, 1, 0.01, l.boxAlpha ?? .1)}` : ""}
         <h3>Couleur du panneau</h3>${swatches("c.panel", l.colors.panel)}
         ${l.style !== "minimal" ? slider("panelAlpha", "Opacité", 0, 1, 0.01, l.panelAlpha) : ""}
         <h3>${l.style === "minimal" ? "Couleur du titre et du badge" : "Couleur du bandeau et du badge"}</h3>${swatches("c.head", l.colors.head || l.colors.accent)}
