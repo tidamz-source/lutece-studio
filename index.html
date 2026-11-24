@@ -438,8 +438,11 @@ function drawScore(ctx, l, draw = true){
   const win = m => { const a = parseFloat(m.sa), b = parseFloat(m.sb); return isNaN(a)||isNaN(b)||a===b ? 0 : (a > b ? 1 : 2); };
   // Polices et couleurs (gagnant / texte normal avec leur opacité, bandeau séparé)
   const fS = l.fontScore || "Anton", fT = l.fontText || "Barlow Condensed", itT = fT === "Barlow Condensed";
-  const aA = l.accentAlpha ?? 1, tA = l.textAlpha ?? 1;
+  const aA = l.accentAlpha ?? 1, tA = l.textAlpha ?? 1, sA = l.scoreAlpha ?? 1, winDigit = l.winDigit !== false;
   const WIN = hexA(c.accent, aA), TXT = hexA(c.text, tA), DIM = hexA(c.text, tA * .55);
+  // Bloc score (chiffres) : couleur et opacité propres ; le chiffre gagnant peut prendre la couleur du gagnant
+  const SC = hexA(c.score || c.text, sA), SCW = winDigit ? hexA(c.accent, sA) : SC, DASH = hexA(c.score || c.text, sA * .6);
+  const dA = w => w === 1 ? SCW : SC, dB = w => w === 2 ? SCW : SC;
   const HEAD = c.head || c.accent, INK = c.ink || "#0A0A0A";
   const colA = w => w === 1 ? WIN : w === 2 ? DIM : TXT, colB = w => w === 2 ? WIN : w === 1 ? DIM : TXT;
   // Dessine des segments [texte, couleur] centrés sur x
@@ -485,9 +488,9 @@ function drawScore(ctx, l, draw = true){
       ctx.fillStyle = hexA(c.panel, l.panelAlpha); rr(ctx, 0, py, W, ph, R); ctx.fill();
       ctx.textBaseline = "alphabetic";
       fitFont(ctx, String(m.sa ?? "") + String(m.sb ?? ""), fS, 230, W - 260, false, 60);
-      ctx.fillStyle = colA(w); ctx.textAlign = "right"; ctx.fillText(String(m.sa ?? ""), W/2 - 70, py + 250);
-      ctx.fillStyle = colB(w); ctx.textAlign = "left";  ctx.fillText(String(m.sb ?? ""), W/2 + 70, py + 250);
-      ctx.fillStyle = hexA(c.text, .6 * tA); ctx.textAlign = "center"; ctx.font = fontStr(fS, 120); ctx.fillText("–", W/2, py + 215);
+      ctx.fillStyle = dA(w); ctx.textAlign = "right"; ctx.fillText(String(m.sa ?? ""), W/2 - 70, py + 250);
+      ctx.fillStyle = dB(w); ctx.textAlign = "left";  ctx.fillText(String(m.sb ?? ""), W/2 + 70, py + 250);
+      ctx.fillStyle = DASH; ctx.textAlign = "center"; ctx.font = fontStr(fS, 120); ctx.fillText("–", W/2, py + 215);
       [[m.a, W*.25, colA(w)], [m.b, W*.75, colB(w)]].forEach(([t, x, col]) => {
         t = (t || "").toUpperCase();
         fitFont(ctx, t, fT, 54, W/2 - 60, false);
@@ -519,7 +522,7 @@ function drawScore(ctx, l, draw = true){
         ctx.fillStyle = colB(w); ctx.fillText(tb, W/2 + 120, cy + 2);
         ctx.fillStyle = hexA(c.box || c.text, l.boxAlpha ?? .1); rr(ctx, W/2 - 98, cy - 40, 196, 80, 18); ctx.fill();
         fitFont(ctx, `${m.sa ?? ""} - ${m.sb ?? ""}`, fS, 58, 176, false, 24);
-        segs([[String(m.sa ?? ""), w === 1 ? WIN : TXT], [" - ", DIM], [String(m.sb ?? ""), w === 2 ? WIN : TXT]], W/2, cy + 4);
+        segs([[String(m.sa ?? ""), dA(w)], [" - ", DASH], [String(m.sb ?? ""), dB(w)]], W/2, cy + 4);
       });
       drawSubIn(py, ph);
     });
@@ -538,7 +541,7 @@ function drawScore(ctx, l, draw = true){
       const my = y, w = win(m);
       out.push(() => {
         const A = (m.a || "").toUpperCase(), B = (m.b || "").toUpperCase();
-        const parts = [[A + "  ", colA(w)], [String(m.sa ?? ""), w === 1 ? WIN : TXT], ["-", DIM], [String(m.sb ?? ""), w === 2 ? WIN : TXT], ["  " + B, colB(w)]];
+        const parts = [[A + "  ", colA(w)], [String(m.sa ?? ""), dA(w)], ["-", DASH], [String(m.sb ?? ""), dB(w)], ["  " + B, colB(w)]];
         fitFont(ctx, parts.map(p => p[0]).join(""), fS, 104, W);
         ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 5;
         ctx.textBaseline = "middle";
@@ -1317,13 +1320,17 @@ function renderPanel(){
         <h3>Police des scores${l.style === "list" ? " et du bandeau" : ""}</h3>${fontPills("fontScore", l.fontScore || "Anton")}
         <h3 style="margin-top:12px">Police des équipes et textes</h3>${fontPills("fontText", l.fontText || "Barlow Condensed")}
         <div class="sep"></div>
-        <h3>Couleur du gagnant</h3>${swatches("c.accent", l.colors.accent)}
+        <h3>Gagnant <small style="text-transform:none;letter-spacing:0">nom de l'équipe gagnante</small></h3>${swatches("c.accent", l.colors.accent)}
         ${slider("accentAlpha", "Opacité", 0.1, 1, 0.01, l.accentAlpha ?? 1)}
-        <h3>Couleur du texte</h3>${swatches("c.text", l.colors.text)}
+        <h3>Texte <small style="text-transform:none;letter-spacing:0">autres noms, titre, date</small></h3>${swatches("c.text", l.colors.text)}
         ${slider("textAlpha", "Opacité", 0.1, 1, 0.01, l.textAlpha ?? 1)}
         <div class="sep"></div>
-        ${l.style === "list" ? `<h3>Cases des scores</h3>${swatches("c.box", l.colors.box || l.colors.text)}
+        <h3>Score <small style="text-transform:none;letter-spacing:0">chiffres et tiret</small></h3>${swatches("c.score", l.colors.score || l.colors.text)}
+        ${slider("scoreAlpha", "Opacité", 0.1, 1, 0.01, l.scoreAlpha ?? 1)}
+        <div class="row">${pills("winDigit", [["true","Chiffre gagnant en couleur gagnant"],["false","Tous pareils"]], l.winDigit !== false)}</div>
+        ${l.style === "list" ? `<h3>Cartouche des scores</h3>${swatches("c.box", l.colors.box || l.colors.text)}
         ${slider("boxAlpha", "Opacité", 0, 1, 0.01, l.boxAlpha ?? .1)}` : ""}
+        <div class="sep"></div>
         <h3>Couleur du panneau</h3>${swatches("c.panel", l.colors.panel)}
         ${l.style !== "minimal" ? slider("panelAlpha", "Opacité", 0, 1, 0.01, l.panelAlpha) : ""}
         <h3>${l.style === "minimal" ? "Couleur du titre et du badge" : "Couleur du bandeau et du badge"}</h3>${swatches("c.head", l.colors.head || l.colors.accent)}
